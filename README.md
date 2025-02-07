@@ -1,6 +1,8 @@
 # fem2d
 
-Basic finite element code developed during my PhD. The focuses was on finding shape sensitivities w.r.t load displacement paths for non-linear sturctual problems.
+Basic finite element code developed during my PhD. The focuses was on finding shape sensitivities w.r.t load displacement paths for non-linear sturctual problems. Therefore, the code is written for small mesh FEM problems with the focus being developping an understanding of FEM and the implementation of design sensitivities.
+
+The code includes, three basic element types, three solvers, and three meshers for simple structual problems.
 
 ## Solvers:
 
