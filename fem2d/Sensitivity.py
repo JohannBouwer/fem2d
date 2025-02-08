@@ -2,8 +2,6 @@ from Elements4Node import Q4, FiveBeta
 from Elements8Node import Q8
 import numpy as np
 
-#TO DO: add FiveBeta sensitivities
-
 class dQ4dX(Q4):
     
     def dJdX(self, xi, eta, DOF):
