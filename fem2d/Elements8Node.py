@@ -1,5 +1,5 @@
 import numpy as np
-from Elements4Node import Q4
+from fem2d.elements4Node import Q4
 from numpy.polynomial.legendre import leggauss
 
 class Q8(Q4): #inherit unspecified functions from Q4 class

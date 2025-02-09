@@ -1,7 +1,7 @@
 import numpy as np
-from Elements4Node import *
-from Elements8Node import *
-from Sensitivity import *
+from fem2d.elements4Node import *
+from fem2d.elements8Node import *
+from fem2d.sensitivity import *
 
 class FEMSolvers(object):
     
@@ -486,7 +486,7 @@ class FEMSolvers(object):
             Mesh.LoadValues = np.append(Mesh.LoadValues, Loadfactor)
             
             if Sensitivity:
-                # to do: fix dLdx
+                
                 dUdx = np.zeros((Mesh.U.shape[0], Mesh.VariableNumber))
                 dLdx = np.zeros((1,Mesh.VariableNumber))
                 

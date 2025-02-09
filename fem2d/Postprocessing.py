@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from Elements4Node import *
+from fem2d.elements4Node import *
 
 def StrainMatrix(Mesh, ElementNumber, GlobalCoor):
     

@@ -1,5 +1,5 @@
-from Elements4Node import Q4, FiveBeta
-from Elements8Node import Q8
+from fem2d.elements4Node import Q4, FiveBeta
+from fem2d.elements8Node import Q8
 import numpy as np
 
 class dQ4dX(Q4):
