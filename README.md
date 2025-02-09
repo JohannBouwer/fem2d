@@ -1,7 +1,7 @@
 # FEM2D: Finite Element Code for Shape Sensitivities
 
 ## Overview
-This is a basic finite element code developed during my PhD, focusing on shape sensitivities with respect to load-displacement paths in nonlinear structural problems. The code is designed for small-mesh FEM problems, emphasizing the understanding of finite element methods and the implementation of design sensitivities.
+This is a basic finite element code developed during my PhD, focusing on shape sensitivities with respect to load-displacement paths in nonlinear structural problems. The code is designed for small-mesh FEM problems, emphasizing the understanding of finite element methods and the implementation of design sensitivities. The code also includes a Q3 1D element implementation.
 
 ## Features
 - Supports **three element types**, **three solvers**, and **three meshers** for simple structural problems.
