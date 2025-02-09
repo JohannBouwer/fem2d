@@ -29,7 +29,6 @@ The repository includes example files demonstrating the usage of different solve
 - How to select different solvers and element types.
 - How to visualize and interpret results.
 
-For any questions or contributions, feel free to reach out!
 
 
 
