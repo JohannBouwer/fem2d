@@ -47,8 +47,7 @@ class Q4(object):
         -------
         Cmat : Constitutive relationship matrix. i.e, stress-strain relationship.
         '''
-        #TO DO: make Cmat a function of the gloabl co-ordinates.
-        
+
         if self.LinearFlag:
             
             if self.plane%2 == 0: #Plane Stress
