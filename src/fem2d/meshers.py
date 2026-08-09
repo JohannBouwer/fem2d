@@ -1,5 +1,7 @@
 import numpy as np
 
+from fem2d.materials import PlaneState
+
 # node*2 - 2 : x direction
 # node*2 - 1 : y direction
 class Mesh(object):
@@ -24,7 +26,7 @@ class Mesh(object):
         self.E = E
         self.v = v
         self.t = thickness
-        self.plane = plane
+        self.plane = PlaneState.From(plane)
         
         self.ElementType = ElementType
 

@@ -15,6 +15,8 @@ from typing import ClassVar
 
 import numpy as np
 
+from fem2d.materials import ConstitutiveMatrix
+
 
 class Element(ABC):
 
@@ -110,41 +112,8 @@ class Element(ABC):
         Cmat : Constitutive relationship matrix. i.e, stress-strain relationship.
         '''
 
-        if self.LinearFlag:
-            
-            if self.plane%2 == 0: #Plane Stress
-                
-                Cmat = self.E/(1 - self.v**2) * np.array([[1, self.v, 0],
-                                                          [self.v, 1, 0],
-                                                          [0, 0, (1 - self.v)/2]])
-            else: #Plane Strain
-                
-                Cmat = self.E/((1 + self.v)*(1 - 2*self.v)) * np.array([[1 - self.v, self.v, 0],
-                                                                        [self.v, 1 - self.v, 0],
-                                                                        [0, 0, (1 - 2*self.v)/2]])
-        
-        
-        else:
-            
-            if self.plane%2 == 0:
-                
-                Cmat = self.E/(1 - self.v**2) * np.array([[1, self.v, 0, 0],
-                                                          [self.v, 1, 0, 0],
-                                                          [0, 0, 1 - self.v, 0],
-                                                          [0, 0, 0, 1 - self.v]])
-                
-            else:
-                
-                E = self.E/(1 - self.v**2)
-                v = self.v/(1 - self.v)
-                
-                Cmat = E/(1 - v**2) * np.array([[1, v, 0, 0],
-                                                [v, 1, 0, 0],
-                                                [0, 0, 1 - v, 0],
-                                                [0, 0, 0, 1 - v]])
-        
-        return Cmat
-    
+        return ConstitutiveMatrix(self.E, self.v, self.plane, self.LinearFlag)
+
     def N(self, xi, eta):
         '''
         Parameters

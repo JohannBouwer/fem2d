@@ -20,7 +20,7 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse import linalg as spla
 
-from fem2d.elements import FiveBeta, Q4, Q8, d5BdX, dQ4dX, dQ8dX
+from fem2d.elements.registry import LookupElement
 
 
 class Solver(ABC):
@@ -54,26 +54,16 @@ class Solver(ABC):
         '''
         Parameters
         ----------
-        Mesh : Mesh object from the Mesher Class.
         Derivative : Return the shape derivitive class instead of the element.
 
         Returns
         -------
-        The element class named by Mesh.ElementType.
+        The element class named by Mesh.ElementType, which may be a registered
+        name or an Element subclass supplied directly.
 
         '''
 
-        Mesh = self.Mesh
-        Types = {'Q4' : (Q4, dQ4dX),
-                 '5B' : (FiveBeta, d5BdX),
-                 'Q8' : (Q8, dQ8dX)}
-
-        if Mesh.ElementType not in Types:
-
-            raise ValueError('Unknown ElementType {!r}, expected one of {}'.format(
-                             Mesh.ElementType, sorted(Types)))
-
-        return Types[Mesh.ElementType][1 if Derivative else 0]
+        return LookupElement(self.Mesh.ElementType, Derivative = Derivative)
 
     def _ElementDOF(self, el):
         '''
