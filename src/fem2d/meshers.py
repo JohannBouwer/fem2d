@@ -96,7 +96,51 @@ class Mesh:
 
         return Nodes
 
-    def _SemiCircularArchNodes(self, el_num, r_base, r_design, t):
+    #: Included angle of the arch in degrees. 215 is the DaDeppo and Schmidt
+    #: deep circular arch, which is the geometry the shape design work uses.
+    ArchSpan = 215.0
+
+    def _ArchAngles(self, Number, Span = None):
+        '''
+        Parameters
+        ----------
+        Number : How many angles to return.
+        Span : Included angle in degrees, or None for ArchSpan.
+
+        Returns
+        -------
+        Number angles in radians, evenly spaced over the span and centred on the
+        crown at 90 degrees.
+
+        '''
+        if Span is None:
+
+            Span = self.ArchSpan
+
+        return np.deg2rad(np.linspace(90 - Span/2, 90 + Span/2, Number))
+
+    def _RadiusSpline(self, theta, r):
+        '''
+        Parameters
+        ----------
+        theta : Angles of the design points.
+        r : Radii at those angles.
+
+        Returns
+        -------
+        Interpolant for the radius at any angle. Cubic, which is what the shape
+        design work uses, dropping to the highest order the point count allows:
+        cubic needs four points, so a single design variable, which gives only
+        three points with the two fixed ends, falls back to quadratic.
+
+        '''
+        import scipy.interpolate as si
+
+        Kind = {2 : 'linear', 3 : 'quadratic'}.get(len(theta), 'cubic')
+
+        return si.interp1d(theta, r, kind = Kind)
+
+    def _SemiCircularArchNodes(self, el_num, r_base, r_design, t, Span = None):
         '''
         Parameters
         ----------
@@ -104,6 +148,7 @@ class Mesh:
         r_base : Radius at ends.
         r_design : design points radius.
         t : thickness.
+        Span : Included angle in degrees, or None for ArchSpan.
 
         Returns
         -------
@@ -111,16 +156,11 @@ class Mesh:
         DesignX, DesignY : Positions of the design points.
 
         '''
-        import scipy.interpolate as si
-
         NumVar = len(r_design)
 
-        theta = np.zeros(NumVar+2)
-        theta[0] = -45
-        theta[-1] = -45 + 270
-        theta[1:-1] = np.linspace(-45,225,2+NumVar)[1:-1]
-
-        theta = np.deg2rad(theta)
+        # Design points sit at equal angle increments with the ends excluded,
+        # since those are held at r_base.
+        theta = self._ArchAngles(NumVar + 2, Span)
 
         r = np.zeros(2+NumVar)
         r[[0,-1]] = r_base
@@ -129,9 +169,9 @@ class Mesh:
         DesignX = r*np.cos(theta)
         DesignY = r*np.sin(theta)
 
-        func = si.interp1d(theta, r, kind = 'quadratic')
+        func = self._RadiusSpline(theta, r)
 
-        app_theta = np.deg2rad(np.linspace(-45,225, el_num + 1))
+        app_theta = self._ArchAngles(el_num + 1, Span)
         app_r = func(app_theta)
 
         NodesX_top = app_r*np.cos(app_theta)
@@ -361,20 +401,23 @@ class Mesh:
         return
 
 
-    def SemiCircularArch(self, el_num, r_base, r_design, t, Load):
+    def SemiCircularArch(self, el_num, r_base, r_design, t, Load, Span = None):
         '''
         Parameters
         ----------
+        el_num : Number of elements along the arch.
         r_base : Radius at ends
         r_design : design points radius
         t : thickness.
+        Load : Point load applied at the crown.
+        Span : Included angle in degrees, or None for ArchSpan.
 
         Returns
         -------
         Nodes and Element Matrixes as well as sensitivity.
 
         '''
-        Nodes, DesignX, DesignY = self._SemiCircularArchNodes(el_num, r_base, r_design, t)
+        Nodes, DesignX, DesignY = self._SemiCircularArchNodes(el_num, r_base, r_design, t, Span)
 
         Elements = np.zeros((el_num,5))
         element = np.array([1,1,2,4,3])
@@ -405,7 +448,7 @@ class Mesh:
 
         # Sensitivity
         self.dXdx = self._NodeSensitivity(
-            lambda v: self._SemiCircularArchNodes(el_num, r_base, v, t)[0], r_design)
+            lambda v: self._SemiCircularArchNodes(el_num, r_base, v, t, Span)[0], r_design)
 
         return
 
@@ -560,15 +603,152 @@ class Q8Mesh(Mesh):
 
         return
 
-    def SemiCircularArch(self, el_num, r_base, r_design, t, Load):
+    def _SemiCircularArchNodes(self, el_num, r_base, r_design, t, Span = None):
         '''
-        Not implemented for Q8.
+        Parameters
+        ----------
+        el_num : Number of elements along the arch.
+        r_base : Radius at ends.
+        r_design : design points radius.
+        t : thickness.
+        Span : Included angle in degrees, or None for ArchSpan.
 
-        The inherited Q4 version builds four node elements, which the Q8
-        element cannot consume, so it is blocked here rather than silently
-        producing a mesh that fails during assembly.
+        Returns
+        -------
+        Nodes : Node array for the eight node arch through these design radii.
+        DesignX, DesignY : Positions of the design points.
+
+        Notes
+        -----
+        Same three row layout as Q8Mesh.SimpleBeam, so the connectivity carries
+        over unchanged: the inner and outer rows carry a node at every one of
+        the 2*el_num + 1 angular stations, and the middle row only at the
+        el_num + 1 element boundaries, giving 5*el_num + 3 nodes.
+
         '''
+        NumVar = len(r_design)
 
-        raise NotImplementedError(
-            'SemiCircularArch has no eight node version yet. Use Mesh with '
-            "ElementType 'Q4' or '5B' for the arch, or Q8Mesh.SimpleBeam for a Q8 mesh.")
+        Design = self._ArchAngles(NumVar + 2, Span)
+
+        r = np.zeros(2 + NumVar)
+        r[[0,-1]] = r_base
+        r[1:-1] = r_design
+
+        DesignX = r*np.cos(Design)
+        DesignY = r*np.sin(Design)
+
+        Radius = self._RadiusSpline(Design, r)
+
+        Station = self._ArchAngles(2*el_num + 1, Span)   # corners and mid sides
+        Boundary = Station[0::2]                          # element boundaries only
+
+        Outer = Radius(Station)
+        Inner = Outer - t
+        Middle = Radius(Boundary) - t/2
+
+        Nodes = np.zeros((el_num*5 + 3, 3))
+        Nodes[:,0] = np.arange(1, el_num*5 + 4)
+
+        Split = 2*el_num + 1
+
+        # The outer radius goes in the first row. SimpleBeam's connectivity runs
+        # first row -> second row, and on an arch that traversal is only counter
+        # clockwise, giving a positive Jacobian, if the first row is the outer
+        # one. With the rows the other way round every detJ comes out negative
+        # and the stiffness matrix changes sign.
+        Nodes[:Split, 1] = Outer*np.cos(Station)
+        Nodes[:Split, 2] = Outer*np.sin(Station)
+
+        Nodes[Split : Split + el_num + 1, 1] = Middle*np.cos(Boundary)
+        Nodes[Split : Split + el_num + 1, 2] = Middle*np.sin(Boundary)
+
+        Nodes[Split + el_num + 1 :, 1] = Inner*np.cos(Station)
+        Nodes[Split + el_num + 1 :, 2] = Inner*np.sin(Station)
+
+        return Nodes, DesignX, DesignY
+
+    def SemiCircularArch(self, el_num, r_base, r_design, t, Load, Span = None):
+        '''
+        Parameters
+        ----------
+        el_num : Number of elements along the arch.
+        r_base : Radius at ends.
+        r_design : design points radius.
+        t : thickness of the arch in the radial direction.
+        Load : Point load applied at the crown.
+        Span : Included angle in degrees, or None for ArchSpan.
+
+        Returns
+        -------
+        None.
+
+        Notes
+        -----
+        The arch is clamped at the first end, where all three nodes of the end
+        edge are held, and pinned at the other, where a single node is held so
+        the edge can still rotate. The four node arch pins its outer node
+        because a two node edge has no mid side node to pin, and this follows
+        that choice so the two element types stay comparable.
+
+        '''
+        self.el_num = el_num
+
+        Nodes, DesignX, DesignY = self._SemiCircularArchNodes(el_num, r_base, r_design, t, Span)
+
+        self.Nodes = Nodes
+
+        # Same connectivity generation as Q8Mesh.SimpleBeam: the node layout is
+        # identical, only the co-ordinates differ.
+        GlobalNumber = np.array([1, 3, 3*el_num+5, 3*el_num+3, 2, 2*el_num+3, 3*el_num+4, 2*el_num+2])
+
+        Elements = np.zeros((el_num, 9))
+        Elements[:,0] = np.arange(1, el_num+1, 1)
+        for i in range(el_num):
+
+            Elements[i,1:] = GlobalNumber
+            GlobalNumber[0] += 2
+            GlobalNumber[1] += 2
+            GlobalNumber[4] += 2
+
+            GlobalNumber[5] += 1
+            GlobalNumber[7] += 1
+
+            GlobalNumber[2] += 2
+            GlobalNumber[3] += 2
+            GlobalNumber[6] += 2
+
+        self.Elements = Elements.astype('int')
+
+        self.var_num = len(r_design)
+        self.VariableNumber = len(r_design)
+        self.VarPos = np.vstack((DesignX, DesignY))
+
+        Split = 2*el_num + 1
+
+        #BC: clamped end holds the whole edge, pinned end holds one node.
+        # The pin must be the outer node, matching the four node arch: pinning
+        # the inner node instead moves the crown deflection by 8 percent, since
+        # it shifts the centre the end edge rotates about.
+        Clamped = [0, Split, Split + el_num + 1]
+        Pinned = [2*el_num]
+
+        Held = []
+        for Node in Clamped + Pinned:
+
+            Held += [2*Node, 2*Node + 1]
+
+        DegOfFreedom = np.arange(0, Nodes.shape[0]*2, 1)
+        self.DegOfFreedom = np.delete(DegOfFreedom, np.array(Held)).astype('int')
+
+        # Load on the outer node at the crown. Which surface it acts on shifts
+        # the answer by under a fifth of a percent.
+        self.LoadNode = 2*el_num + 1
+
+        self.Load = np.zeros((Nodes.shape[0]*2, 1))
+        self.Load[self.LoadNode, 0] = Load
+
+        # Sensitivity
+        self.dXdx = self._NodeSensitivity(
+            lambda v: self._SemiCircularArchNodes(el_num, r_base, v, t, Span)[0], r_design)
+
+        return
