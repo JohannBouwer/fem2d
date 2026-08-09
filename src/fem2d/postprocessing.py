@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from fem2d.elements4Node import *
-from fem2d.elements8Node import Q8
+from fem2d.elements import FiveBeta, Q4, Q8
 
 def _Element(Mesh, ElementNumber):
     '''

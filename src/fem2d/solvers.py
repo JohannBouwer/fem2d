@@ -3,9 +3,7 @@ import warnings
 import numpy as np
 from scipy import sparse
 from scipy.sparse import linalg as spla
-from fem2d.elements4Node import *
-from fem2d.elements8Node import *
-from fem2d.sensitivity import *
+from fem2d.elements import FiveBeta, Q4, Q8, d5BdX, dQ4dX, dQ8dX
 
 class FEMSolvers(object):
     
