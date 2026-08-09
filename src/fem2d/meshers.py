@@ -27,9 +27,134 @@ class Mesh(object):
         self.plane = plane
         
         self.ElementType = ElementType
-        
+
         return
-    
+
+    def _NodeSensitivity(self, Rebuild, Variables, step = 1e-6):
+        '''
+        Parameters
+        ----------
+        Rebuild : Callable taking a list of design variables and returning the
+                  Nodes array the mesher would build from them.
+        Variables : Current values of the design variables.
+        step : Forward difference step on each variable. The default is 1e-6.
+
+        Returns
+        -------
+        dXdx : (NumNodes, 2*NumVariables) derivitive of every nodal co-ordinate
+               w.r.t each design variable, laid out as the solvers expect.
+
+        '''
+        Base = Rebuild(list(Variables))
+
+        dXdx = np.zeros((Base.shape[0], 2*len(Variables)))
+
+        for i in range(len(Variables)):
+
+            Perturbed = list(Variables)
+            Perturbed[i] += step
+
+            dXdx[:, 2*i : 2*i + 2] = (Rebuild(Perturbed)[:, 1:] - Base[:, 1:])/step
+
+        return dXdx
+
+    def _LeeFrameNodes(self, el_num, var):
+        '''
+        Parameters
+        ----------
+        el_num : Number of elements.
+        var : array of the two memeber lengths.
+
+        Returns
+        -------
+        Nodes : Node array for the Lee frame with these member lengths.
+
+        '''
+        length_up = var[0]
+        length_side = var[1]
+        t = 2
+        Nodes = np.zeros((2*el_num+2,3))
+
+        up_nodes = np.linspace(0,length_up-t,int((el_num-1)/2)+1)
+        up_nodes = np.hstack((up_nodes,np.array([length_up])))
+
+        side_nodes = np.linspace(t,length_side,int(el_num/2)+1)
+
+        Nodes[:,0] = np.arange(1,2*el_num+3)
+
+        Nodes[1:el_num + 2:2,1] = np.ones(len(up_nodes))*t
+        Nodes[1:el_num + 2:2,2] = up_nodes
+        Nodes[:el_num + 2:2,2] = up_nodes
+
+        Nodes[el_num+2::2,2] = np.ones(len(side_nodes[1:]))*length_up
+        Nodes[el_num+3::2,2] = np.ones(len(side_nodes[1:]))*length_up-t
+        Nodes[el_num+2::2,1] = side_nodes[1:]
+        Nodes[el_num + 3::2,1] = side_nodes[1:]
+
+        return Nodes
+
+    def _SemiCircularArchNodes(self, el_num, r_base, r_design, t):
+        '''
+        Parameters
+        ----------
+        el_num : Number of elements.
+        r_base : Radius at ends.
+        r_design : design points radius.
+        t : thickness.
+
+        Returns
+        -------
+        Nodes : Node array for the arch through these design radii.
+        DesignX, DesignY : Positions of the design points.
+
+        '''
+        import scipy.interpolate as si
+
+        NumVar = len(r_design)
+
+        theta = np.zeros(NumVar+2)
+        theta[0] = -45
+        theta[-1] = -45 + 270
+        theta[1:-1] = np.linspace(-45,225,2+NumVar)[1:-1]
+
+        theta = np.deg2rad(theta)
+
+        r = np.zeros(2+NumVar)
+        r[[0,-1]] = r_base
+        r[1:-1] = r_design
+
+        DesignX = r*np.cos(theta)
+        DesignY = r*np.sin(theta)
+
+        func = si.interp1d(theta, r, kind = 'quadratic')
+
+        app_theta = np.deg2rad(np.linspace(-45,225, el_num + 1))
+        app_r = func(app_theta)
+
+        NodesX_top = app_r*np.cos(app_theta)
+        NodesY_top = app_r*np.sin(app_theta)
+
+        NodesX_bot = (app_r - t)*np.cos(app_theta)
+        NodesY_bot = (app_r - t)*np.sin(app_theta)
+
+        Nodes = np.zeros((2*el_num+2,3))
+        cnt_top = 0
+        cnt_bot = 0
+        for i in range(1,2*el_num+3,1):
+
+            if i%2 != 0:
+
+                Nodes[i-1,:] = [i, NodesX_bot[cnt_bot], NodesY_bot[cnt_bot]]
+                cnt_bot += 1
+
+            if i%2 == 0:
+
+                Nodes[i-1,:] = [i, NodesX_top[cnt_top], NodesY_top[cnt_top]]
+                cnt_top += 1
+
+        return Nodes, DesignX, DesignY
+
+
     def SingleElement(self, Length, Height, Load):
         
         self.Nodes = np.zeros((4,3))
@@ -49,10 +174,12 @@ class Mesh(object):
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1, 6])).astype('int')
         
         
-        self.Load = np.zeros_like(DegOfFreedom)
+        self.Load = np.zeros((self.Nodes.shape[0]*2, 1))
         self.Load[2*2 - 1 , 0] = Load
         self.Load[3*2 - 1 , 0] = Load
-        
+
+        self.LoadNode = 3*2 - 1 #y degree of freedom of node 3
+
         self.VariableNumber = 1
         
         Nodes_fd = np.zeros((4,3))
@@ -186,29 +313,9 @@ class Mesh(object):
     
         '''
         self.el_num = el_num
-        
-        import numpy as np
-        length_up = var[0]
-        length_side = var[1]
-        t = 2
-        Nodes = np.zeros((2*self.el_num+2,3))
-    
-        up_nodes = np.linspace(0,length_up-t,int((self.el_num-1)/2)+1)
-        up_nodes = np.hstack((up_nodes,np.array([length_up])))
-        
-        side_nodes = np.linspace(t,length_side,int(self.el_num/2)+1)
-        
-        Nodes[:,0] = np.arange(1,2*self.el_num+3)
-        
-        Nodes[1:self.el_num + 2:2,1] = np.ones(len(up_nodes))*t 
-        Nodes[1:self.el_num + 2:2,2] = up_nodes
-        Nodes[:self.el_num + 2:2,2] = up_nodes
-        
-        Nodes[self.el_num+2::2,2] = np.ones(len(side_nodes[1:]))*length_up
-        Nodes[self.el_num+3::2,2] = np.ones(len(side_nodes[1:]))*length_up-t
-        Nodes[self.el_num+2::2,1] = side_nodes[1:]
-        Nodes[self.el_num + 3::2,1] = side_nodes[1:]
-        
+
+        Nodes = self._LeeFrameNodes(self.el_num, var)
+
         Elements = np.zeros((self.el_num,5))
         Elements[:,0] = np.arange(1,self.el_num+1,1)
         
@@ -242,11 +349,15 @@ class Mesh(object):
         
         self.Load = np.zeros((self.Nodes.shape[0]*2,1))
         self.Load[self.LoadNode,0] = Load
-        
+
         self.VariableNumber = 2
 
-        return 
-    
+        # Sensitivity
+        self.dXdx = self._NodeSensitivity(lambda v: self._LeeFrameNodes(self.el_num, v), var)
+
+        return
+
+
     def SemiCircularArch(self, el_num, r_base, r_design, t, Load):
         '''
         Parameters
@@ -260,79 +371,40 @@ class Mesh(object):
         Nodes and Element Matrixes as well as sensitivity.
 
         '''
-        import numpy as np
-        import scipy.interpolate as si
-        
-        NumVar = len(r_design)
-        
-        theta = np.zeros(NumVar+2)
-        theta[0] = -45
-        theta[-1] = -45 + 270
-        theta[1:-1] = np.linspace(-45,225,2+NumVar)[1:-1]
-        
-        theta = np.deg2rad(theta)
-        
-        r = np.zeros(2+NumVar)
-        r[[0,-1]] = r_base
-        r[1:-1] = r_design
-        
-        DesignX = r*np.cos(theta)
-        DesignY = r*np.sin(theta)
-        
-        func = si.interp1d(theta, r, kind = 'quadratic')
-        
-        app_theta = np.deg2rad(np.linspace(-45,225, el_num + 1))
-        app_r = func(app_theta)
-        
-        NodesX_top = app_r*np.cos(app_theta)
-        NodesY_top = app_r*np.sin(app_theta)
-        
-        NodesX_bot = (app_r - t)*np.cos(app_theta)
-        NodesY_bot = (app_r - t)*np.sin(app_theta)
-        
-        Nodes = np.zeros((2*el_num+2,3))
-        cnt_top = 0
-        cnt_bot = 0 
-        for i in range(1,2*el_num+3,1):
-            
-            if i%2 != 0:
-            
-                Nodes[i-1,:] = [i, NodesX_bot[cnt_bot], NodesY_bot[cnt_bot]]
-                cnt_bot += 1
-                
-            if i%2 == 0:
-            
-                Nodes[i-1,:] = [i, NodesX_top[cnt_top], NodesY_top[cnt_top]]
-                cnt_top += 1
-        
+        Nodes, DesignX, DesignY = self._SemiCircularArchNodes(el_num, r_base, r_design, t)
+
         Elements = np.zeros((el_num,5))
         element = np.array([1,1,2,4,3])
         for i in range(1,el_num+1,1):
-            
-            Elements[i-1,:] = element 
-            
+
+            Elements[i-1,:] = element
+
             element += np.array([1,2,2,2,2])
-        
-        
+
+
         self.Nodes = Nodes
         self.Elements = Elements.astype('int')
         self.var_num = len(r_design)
         self.LoadNode = int(Nodes[el_num,0])*2 - 1
         self.VarPos = np.vstack((DesignX, DesignY))
-        
+
         #BC
         DegOfFreedom = np.arange(0, Nodes[-1,0]*2 , 1).reshape(-1,1)
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1,
                                                               2, 3,
-                                                              Nodes[-1,0]*2 - 2, 
+                                                              Nodes[-1,0]*2 - 2,
                                                               Nodes[-1,0]*2 - 1]).astype('int')).astype('int')
-        
+
         self.Load = np.zeros((self.Nodes.shape[0]*2,1))
         self.Load[self.LoadNode,0] = Load
-        
+
         self.VariableNumber = len(r_design)
-        
-        return 
+
+        # Sensitivity
+        self.dXdx = self._NodeSensitivity(
+            lambda v: self._SemiCircularArchNodes(el_num, r_base, v, t)[0], r_design)
+
+        return
 
 #Q8 versions of the meshers
 class Q8Mesh(Mesh):
@@ -366,7 +438,9 @@ class Q8Mesh(Mesh):
         self.Load[3*2 - 2 , 0] = 1/6*Load
         
         self.Load[6*2 - 2 , 0] = 2/3*Load
-        
+
+        self.LoadNode = 3*2 - 2 #x degree of freedom of node 3
+
         self.var_num = 1
         self.VariableNumber = 1
         
@@ -485,90 +559,13 @@ class Q8Mesh(Mesh):
     
     def SemiCircularArch(self, el_num, r_base, r_design, t, Load):
         '''
-        Parameters
-        ----------
-        r_base : Radius at ends
-        r_design : design points radius
-        t : thickness.
+        Not implemented for Q8.
 
-        Returns
-        -------
-        Nodes and Element Matrixes as well as sensitivity.
-
+        The inherited Q4 version builds four node elements, which the Q8
+        element cannot consume, so it is blocked here rather than silently
+        producing a mesh that fails during assembly.
         '''
-        import numpy as np
-        import scipy.interpolate as si
-        
-        NumVar = len(r_design)
-        
-        theta = np.zeros(NumVar+2)
-        theta[0] = -45
-        theta[-1] = -45 + 270
-        theta[1:-1] = np.linspace(-45,225,2+NumVar)[1:-1]
-        
-        theta = np.deg2rad(theta)
-        
-        r = np.zeros(2+NumVar)
-        r[[0,-1]] = r_base
-        r[1:-1] = r_design
-        
-        DesignX = r*np.cos(theta)
-        DesignY = r*np.sin(theta)
-        
-        func = si.interp1d(theta, r, kind = 'quadratic')
-        
-        app_theta = np.deg2rad(np.linspace(-45,225, el_num + 1))
-        app_r = func(app_theta)
-        
-        NodesX_top = app_r*np.cos(app_theta)
-        NodesY_top = app_r*np.sin(app_theta)
-        
-        NodesX_bot = (app_r - t)*np.cos(app_theta)
-        NodesY_bot = (app_r - t)*np.sin(app_theta)
-        
-        Nodes = np.zeros((2*el_num+2,3))
-        cnt_top = 0
-        cnt_bot = 0 
-        for i in range(1,2*el_num+3,1):
-            
-            if i%2 != 0:
-            
-                Nodes[i-1,:] = [i, NodesX_bot[cnt_bot], NodesY_bot[cnt_bot]]
-                cnt_bot += 1
-                
-            if i%2 == 0:
-            
-                Nodes[i-1,:] = [i, NodesX_top[cnt_top], NodesY_top[cnt_top]]
-                cnt_top += 1
-        
-        Elements = np.zeros((el_num,5))
-        element = np.array([1,1,2,4,3])
-        for i in range(1,el_num+1,1):
-            
-            Elements[i-1,:] = element 
-            
-            element += np.array([1,2,2,2,2])
-        
-        self.Nodes = Nodes
-        self.Elements = Elements.astype('int')
-        self.var_num = len(r_design)
-        self.LoadNode = int(Nodes[el_num,0])*2 - 1
-        self.VarPos = np.vstack((DesignX, DesignY))
-        
-        #BC
-        DegOfFreedom = np.arange(0, Nodes[-1,0]*2 , 1).reshape(-1,1)
-        self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1,
-                                                              2, 3,
-                                                              Nodes[-1,0]*2 - 2, 
-                                                              Nodes[-1,0]*2 - 1]).astype('int')).astype('int')
-        
-        self.Load = np.zeros((self.Nodes.shape[0]*2,1))
-        self.Load[self.LoadNode,0] = Load
-        
-        self.VariableNumber = len(r_design)
-        
-        return 
-   
 
-
-
+        raise NotImplementedError(
+            'SemiCircularArch has no eight node version yet. Use Mesh with '
+            "ElementType 'Q4' or '5B' for the arch, or Q8Mesh.SimpleBeam for a Q8 mesh.")

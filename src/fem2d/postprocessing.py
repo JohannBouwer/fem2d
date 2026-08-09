@@ -1,49 +1,103 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from fem2d.elements4Node import *
+from fem2d.elements8Node import Q8
 
-def StrainMatrix(Mesh, ElementNumber, GlobalCoor):
-    
-    NodeCoor = Mesh.Nodes[Mesh.Elements[ElementNumber, 1:] - 1, 1:]
-    
-    if Mesh.ElementTpye == 'q4':
-        
-        Element = Q4
-    
-    if Mesh.ElementType == '5B':
-        
-        Element = FiveBeta
-        
-    B = Element(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane).B(xi, eta)
-    
-    strain = B.dot(U)
-    
+def _Element(Mesh, ElementNumber):
+    '''
+    Parameters
+    ----------
+    Mesh : Mesh object from the Meshers class.
+    ElementNumber : Row index into Mesh.Elements.
+
+    Returns
+    -------
+    Element : Element object built on the requested element.
+    DOF : Global degrees of freedom the element spans, in local order.
+
+    '''
+    Types = {'Q4' : Q4, '5B' : FiveBeta, 'Q8' : Q8}
+
+    if Mesh.ElementType not in Types:
+
+        raise ValueError('Unknown ElementType {!r}, expected one of {}'.format(
+                         Mesh.ElementType, sorted(Types)))
+
+    Local = Mesh.Elements[ElementNumber, 1:]
+
+    NodeCoor = Mesh.Nodes[Local - 1, 1:]
+
+    DOF = np.vstack((Local*2 - 2, Local*2 - 1)).T.reshape(-1)
+
+    return Types[Mesh.ElementType](NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane), DOF
+
+def StrainMatrix(Mesh, ElementNumber, xi, eta):
+    '''
+    Parameters
+    ----------
+    Mesh : Mesh object from the Meshers class, already solved.
+    ElementNumber : Row index into Mesh.Elements.
+    xi : Local variable 1.
+    eta : Local variable 2.
+
+    Returns
+    -------
+    strain : Small strain vector [exx, eyy, gxy] at the local co-ordinates.
+
+    '''
+    Element, DOF = _Element(Mesh, ElementNumber)
+
+    strain = Element.B(xi, eta) @ Mesh.U[DOF, :]
+
     return strain
 
-def StressMatrix(Mesh, ElementNumber):
+def StressMatrix(Mesh, ElementNumber, xi, eta):
+    '''
+    Parameters
+    ----------
+    Mesh : Mesh object from the Meshers class, already solved.
+    ElementNumber : Row index into Mesh.Elements.
+    xi : Local variable 1.
+    eta : Local variable 2.
 
-    NodeCoor = Mesh.Nodes[Mesh.Elements[ElementNumber, 1:] - 1, 1:]
-    
-    if Mesh.ElementTpye == 'q4':
-        
-        Element = Q4(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane)
-    
-    if Mesh.ElementType == '5B':
-        
-        Element = FiveBeta(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane)
-    
+    Returns
+    -------
+    stress : Small strain stress vector [sxx, syy, sxy] at the local co-ordinates.
 
-    B = Element.B(xi, eta)
-    C = Element.C()
-    
-    stress = C.dot(B).dot(U)
-    
+    '''
+    Element, DOF = _Element(Mesh, ElementNumber)
+
+    stress = Element.C() @ Element.B(xi, eta) @ Mesh.U[DOF, :]
+
     return stress
 
-def VonMisses(Mesh, ElementNumber, GlobalCoor):
-    
-    
-    return
+def VonMisses(Mesh, ElementNumber, xi, eta):
+    '''
+    Parameters
+    ----------
+    Mesh : Mesh object from the Meshers class, already solved.
+    ElementNumber : Row index into Mesh.Elements.
+    xi : Local variable 1.
+    eta : Local variable 2.
+
+    Returns
+    -------
+    The von Mises equivalent stress at the local co-ordinates.
+
+    '''
+    stress = StressMatrix(Mesh, ElementNumber, xi, eta)
+
+    sxx, syy, sxy = stress[0,0], stress[1,0], stress[2,0]
+
+    if Mesh.plane%2 == 0: #Plane Stress
+
+        szz = 0.0
+
+    else: #Plane Strain
+
+        szz = Mesh.v*(sxx + syy)
+
+    return np.sqrt(0.5*((sxx - syy)**2 + (syy - szz)**2 + (szz - sxx)**2 + 6*sxy**2))
 
 class Plotting(object):
 
@@ -225,9 +279,16 @@ class Plotting(object):
             ax = fig.add_subplot(111)
             ax.set(xlabel = 'Displacement', ylabel = 'Load')
         
+        if not hasattr(Mesh, 'LoadValues'):
+
+            raise AttributeError(
+                'This Mesh has no LoadValues, so there is no load path to plot. '
+                'LinearSolver applies the load in one shot; use NonLinearSolver '
+                'or ArcLengthSolver to trace a path.')
+
         Disp = Mesh.AllU[Mesh.LoadNode, :]
-        Load = Mesh.LoadValues*abs(Mesh.Load[Mesh.LoadNode, :])
-        
+        Load = np.ravel(Mesh.LoadValues)*abs(Mesh.Load[Mesh.LoadNode, 0])
+
         ax.plot(Disp, Load, color = c, marker = '.')
         
             
