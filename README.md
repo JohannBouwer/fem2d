@@ -24,10 +24,14 @@ The code includes the following solvers:
 - **Curved Beam**: Mesh for curved beam structures.
 
 ## Example Usage
-The repository includes example files demonstrating the usage of different solvers, element types, and meshers. These examples help users understand:
-- How to define input parameters.
-- How to select different solvers and element types.
-- How to visualize and interpret results.
+The `notebooks/` directory contains worked examples, each executed with its output stored:
+
+- **`Example_solvers.ipynb`** — every element and solver combination on a cantilever, deformed
+  shapes, load paths, and the four meshers.
+- **`Example_sensitivity.ipynb`** — shape sensitivities for every element and solver, each checked
+  against a central finite difference, plus the load factor sensitivity along an arc length path.
+- **`Example_optimisation.ipynb`** — shape optimisation with `scipy.optimize.minimize`, finding the
+  cantilever length that deflects to a target under a fixed load, driven by the analytical gradient.
 
 
 
