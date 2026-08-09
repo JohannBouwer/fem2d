@@ -84,6 +84,13 @@ The `notebooks/` directory contains worked examples, each executed with its outp
   interpolated with sin² and cos², which turns out to be Q4 in disguise but with an integrand Gauss
   quadrature cannot integrate exactly, so it doubles as a lesson in choosing a quadrature rule.
 
+## Research
+The [`research/`](research/) directory reproduces results from the paper this code was written for,
+Bouwer, Kok and Wilke (2023), *Challenges and solutions to arc-length controlled structural shape
+design problems*, [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549):
+why large arc-length steps pay for themselves, a four variable arch design space, and those designs
+solved with Q8 elements.
+
 
 
 

@@ -25,7 +25,7 @@ packages = ["src/fem2d"]
 [tool.ruff]
 line-length = 120
 src = ["src"]
-extend-exclude = ["notebooks"]  # generated, and their outputs are not ours to lint
+extend-exclude = ["notebooks", "research"]  # generated, and their outputs are not ours to lint
 
 [tool.ruff.lint]
 select = [
