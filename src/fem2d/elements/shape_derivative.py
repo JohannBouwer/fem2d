@@ -11,20 +11,18 @@ class dQ4dX(Q4):
         ----------
         xi : Local variable 1.
         eta : Local variable 2.
+        DOF : Local degree of freedom to take the derivitive w.r.t .
 
         Returns
         -------
-        Derivitive of the Jacobian w.r.t
-        the nodal Coordinates.
+        Derivitive of the Jacobian w.r.t the nodal Coordinates.
 
         '''
-        
-        dNdx = np.array([[self.dN1dXi(xi, eta), self.dN2dXi(xi, eta), self.dN3dXi(xi, eta), self.dN4dXi(xi, eta)],
-                      [self.dN1dEta(xi, eta), self.dN2dEta(xi, eta), self.dN3dEta(xi, eta), self.dN4dEta(xi, eta)]])
-        
-        x = np.zeros((4,2)) 
+
+        x = np.zeros((self.NumNodes, 2))
         x[int(DOF//2), DOF%2] = 1
-        djdx = dNdx @ x
+
+        djdx = self.ShapeDerivatives(xi, eta) @ x
 
         return djdx
     
@@ -241,7 +239,7 @@ class dQ4dX(Q4):
         SensMatrix : Derivivite of the element stiffness matrix.
 
         '''
-        SensMatrix = np.zeros((8,8))
+        SensMatrix = np.zeros((self.NumDOF, self.NumDOF))
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
@@ -266,7 +264,7 @@ class dQ4dX(Q4):
         SensResidual :  Derivivite of the element residual vector..
 
         '''
-        SensResidual = np.zeros((8,1))
+        SensResidual = np.zeros((self.NumDOF, 1))
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
@@ -476,16 +474,24 @@ class dQ8dX(Q8):
         return drdx
     
     def dJdX(self, xi, eta, DOF):
-        
-        dNdx = np.array([[self.dN1dXi(xi, eta), self.dN2dXi(xi, eta), self.dN3dXi(xi, eta), self.dN4dXi(xi, eta), 
-                          self.dN5dXi(xi, eta), self.dN6dXi(xi, eta), self.dN7dXi(xi, eta), self.dN8dXi(xi, eta)],
-                        [self.dN1dEta(xi, eta), self.dN2dEta(xi, eta), self.dN3dEta(xi, eta), self.dN4dEta(xi, eta),
-                         self.dN5dEta(xi, eta), self.dN6dEta(xi, eta), self.dN7dEta(xi, eta), self.dN8dEta(xi, eta)]])
-       
-        x = np.zeros((8,2)) 
+        '''
+        Parameters
+        ----------
+        xi : Local variable 1.
+        eta : Local variable 2.
+        DOF : Local degree of freedom to take the derivitive w.r.t .
+
+        Returns
+        -------
+        Derivitive of the Jacobian w.r.t the nodal Coordinates.
+
+        '''
+
+        x = np.zeros((self.NumNodes, 2))
         x[int(DOF//2), DOF%2] = 1
-        djdx = dNdx @ x
-        
+
+        djdx = self.ShapeDerivatives(xi, eta) @ x
+
         return djdx
     
     def Integrate(self, DOF, GuassPoints = None):
@@ -502,7 +508,7 @@ class dQ8dX(Q8):
         SensMatrix : Derivivite of the element stiffness matrix.
 
         '''
-        SensMatrix = np.zeros((16,16))
+        SensMatrix = np.zeros((self.NumDOF, self.NumDOF))
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
@@ -527,7 +533,7 @@ class dQ8dX(Q8):
         SensResidual :  Derivivite of the element residual vector..
 
         '''
-        SensResidual = np.zeros((16,1))
+        SensResidual = np.zeros((self.NumDOF, 1))
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
@@ -567,7 +573,7 @@ class d5BdX(dQ4dX, FiveBeta):
 
         if DOF%2 == 0:
             
-            dX = np.zeros((4,1))
+            dX = np.zeros((self.NumNodes, 1))
             dX[DOF//2, 0] = 1
             dA = mat @ dX
             
@@ -581,7 +587,7 @@ class d5BdX(dQ4dX, FiveBeta):
             
         else:
             
-            dX = np.zeros((4,1))
+            dX = np.zeros((self.NumNodes, 1))
             dX[DOF//2, 0] = 1
             dB = mat @ dX
             
@@ -599,7 +605,7 @@ class d5BdX(dQ4dX, FiveBeta):
             
         else:
             
-            dPdX = np.zeros((4, 5))
+            dPdX = np.zeros((4, self.NumBeta))
             
             dPdX[:-1,:] = dP
             dPdX[-1,:] = dP[-1,:]
@@ -691,11 +697,11 @@ class d5BdX(dQ4dX, FiveBeta):
     
         '''
         
-        G = np.zeros((8,5))
-        H = np.zeros((5,5))
+        G = np.zeros((self.NumDOF, self.NumBeta))
+        H = np.zeros((self.NumBeta, self.NumBeta))
         
-        dG = np.zeros((8,5))
-        dH = np.zeros((5,5))
+        dG = np.zeros((self.NumDOF, self.NumBeta))
+        dH = np.zeros((self.NumBeta, self.NumBeta))
             
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
     
@@ -732,16 +738,16 @@ class d5BdX(dQ4dX, FiveBeta):
         SensResidual :  Derivivite of the element residual vector..
 
         '''
-        SensResidual = np.zeros((8,1))
+        SensResidual = np.zeros((self.NumDOF, 1))
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
-        dG = np.zeros((8,5))
-        dH = np.zeros((5,5))
-        dM = np.zeros((5,1))
+        dG = np.zeros((self.NumDOF, self.NumBeta))
+        dH = np.zeros((self.NumBeta, self.NumBeta))
+        dM = np.zeros((self.NumBeta, 1))
         
-        G = np.zeros((8,5))
-        H = np.zeros((5,5))
-        M = np.zeros((5,1))
+        G = np.zeros((self.NumDOF, self.NumBeta))
+        H = np.zeros((self.NumBeta, self.NumBeta))
+        M = np.zeros((self.NumBeta, 1))
         
         for Xi, Wxi in zip(gp, gw):
             

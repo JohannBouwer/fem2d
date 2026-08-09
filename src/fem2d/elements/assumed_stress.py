@@ -3,6 +3,16 @@ import numpy as np
 from fem2d.elements.quad4 import Q4
 
 class FiveBeta(Q4):
+    '''
+    Five parameter assumed stress quadrilateral (Pian-Sumihara).
+
+    A Q4 whose stress field is interpolated independently of the
+    displacements, which is what removes the shear locking Q4 suffers from.
+    '''
+
+    #: Number of assumed stress parameters, the beta vector.
+    NumBeta = 5
+
     
     def P(self, xi, eta):
         '''
@@ -133,8 +143,8 @@ class FiveBeta(Q4):
         StiffMatrix : (8x8) Element Stiffness Matrix.
         '''
         
-        G = np.zeros((8,5))
-        H = np.zeros((5,5))
+        G = np.zeros((self.NumDOF, self.NumBeta))
+        H = np.zeros((self.NumBeta, self.NumBeta))
             
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
     
@@ -163,10 +173,10 @@ class FiveBeta(Q4):
         ResidualVector : Integrated residual Vector.
 
         '''
-        G = np.zeros((8,5))
-        H = np.zeros((5,5))
-        M = np.zeros((5,1))
-        L = np.zeros((8,8))
+        G = np.zeros((self.NumDOF, self.NumBeta))
+        H = np.zeros((self.NumBeta, self.NumBeta))
+        M = np.zeros((self.NumBeta, 1))
+        L = np.zeros((self.NumDOF, self.NumDOF))
 
         gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
 
