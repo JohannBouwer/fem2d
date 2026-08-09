@@ -1,17 +1,20 @@
 import numpy as np
 
+from fem2d.materials import PlaneState
+
+
 # node*2 - 2 : x direction
 # node*2 - 1 : y direction
-class Mesh(object):
-    
+class Mesh:
+
     def __init__(self, E, v, thickness, plane, ElementType):
         '''
         Parameters
         ----------
-        E : Youngs modulous.
+        E : Youngs modulus.
         v : poission ratio.
         thickness : thickness in the 3rd dimensions.
-        plane : plane strain or plane stress. 
+        plane : plane strain or plane stress.
                 option 1 or 2.
         ElementType : Type of element.
                     option: q4, 5B.
@@ -24,8 +27,8 @@ class Mesh(object):
         self.E = E
         self.v = v
         self.t = thickness
-        self.plane = plane
-        
+        self.plane = PlaneState.From(plane)
+
         self.ElementType = ElementType
 
         return
@@ -41,7 +44,7 @@ class Mesh(object):
 
         Returns
         -------
-        dXdx : (NumNodes, 2*NumVariables) derivitive of every nodal co-ordinate
+        dXdx : (NumNodes, 2*NumVariables) derivative of every nodal co-ordinate
                w.r.t each design variable, laid out as the solvers expect.
 
         '''
@@ -63,7 +66,7 @@ class Mesh(object):
         Parameters
         ----------
         el_num : Number of elements.
-        var : array of the two memeber lengths.
+        var : array of the two member lengths.
 
         Returns
         -------
@@ -156,24 +159,24 @@ class Mesh(object):
 
 
     def SingleElement(self, Length, Height, Load):
-        
+
         self.Nodes = np.zeros((4,3))
         self.Nodes[:,0] = np.arange(1, 5, 1).astype('int')
-        
+
         self.Nodes[:,1:] = np.array([[0, 0],
                                 [1, 0],
                                 [1, 1],
                                 [0, 1]])
-        
+
         self.Nodes[:,1] *= Length
         self.Nodes[:,2] *= Height
-        
+
         self.Elements = np.array([[1, 1, 2, 3, 4]]).astype('int')
-        
+
         DegOfFreedom = np.arange(0, self.Nodes[-1,0]*2 , 1).reshape(-1,1)
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1, 6])).astype('int')
-        
-        
+
+
         self.Load = np.zeros((self.Nodes.shape[0]*2, 1))
         self.Load[2*2 - 1 , 0] = Load
         self.Load[3*2 - 1 , 0] = Load
@@ -181,27 +184,27 @@ class Mesh(object):
         self.LoadNode = 3*2 - 1 #y degree of freedom of node 3
 
         self.VariableNumber = 1
-        
+
         Nodes_fd = np.zeros((4,3))
         Nodes_fd[:,0] = np.arange(1, 5, 1).astype('int')
-        
+
         Nodes_fd[:,1:] = np.array([[0, 0],
                                 [1, 0],
                                 [1, 1],
                                 [0, 1]])
-        
+
         Nodes_fd[:,1] *= Length
         Nodes_fd[:,2] *=  (Height + 1e-6)
-        
+
         self.dXdx = (Nodes_fd - self.Nodes)[:,[1,2]]
         self.dXdx /= 1e-6
-        
+
         return
-    
+
     def SimpleBeam(self, el_num, Length, Height, Load):
         '''
         A simple 1 element thick cantilever beam. Pinned at the left edge and point loaded at the right.
-        
+
         Parameters
         ----------
         el_num : Number of elements.
@@ -214,103 +217,103 @@ class Mesh(object):
 
         '''
         self.el_num = el_num
-        
+
         NodesX = np.linspace(0, Length, self.el_num + 1)
         NodesY = np.linspace(0, Height, 2)
-        
+
         Nodes = np.zeros(((self.el_num + 1)*2, 3))
-        
+
         Nodes[:,0] = np.arange(1, (self.el_num+1)*2 + 1)
-        
+
         Nodes[:self.el_num+1, 1] = NodesX
         Nodes[self.el_num + 1:, 1] = NodesX
-        
+
         Nodes[:self.el_num+1, 2] = NodesY[0]
         Nodes[self.el_num + 1:, 2] = NodesY[1]
-        
+
         self.Nodes = Nodes
-        
+
         Elements = np.zeros((self.el_num, 5))
-        
+
         Elements[:,0] = np.arange(1, self.el_num+1)
-        
+
         LocalNodes = np.array([1, 2, self.el_num+3, self.el_num+2])
-        
+
         Elements[0, 1:] = LocalNodes
         for i in np.arange(1, self.el_num):
-            
+
             LocalNodes += 1
-            
+
             Elements[i,1:] = LocalNodes
-            
+
         self.Elements = Elements.astype('int')
-        
+
         self.Nodal_coor = Nodes[:,[0]]
         self.var_num = 2
         self.LoadNode = Nodes[-1,0]
-        
+
         #BC
         DegOfFreedom = np.arange(0, Nodes[-1,0]*2 , 1).reshape(-1,1)
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1, 2*self.el_num + 2])).astype('int')
-        
+
         self.LoadNode = Nodes[-1, 0].astype('int')*2 - 1
-        
+
         self.Load = np.zeros((self.Nodes.shape[0]*2,1))
         self.Load[-1,0] = Load
-        
+
         # Sensitivity
-        
+
         fd_Length = Length + 1e-6
-        
+
         NodesX = np.linspace(0, fd_Length, self.el_num + 1)
         NodesY = np.linspace(0, Height, 2)
-        
+
         Nodes_fd = np.zeros(((self.el_num + 1)*2, 3))
-        
+
         Nodes_fd[:,0] = np.arange(1, (self.el_num+1)*2 + 1)
-        
+
         Nodes_fd[:self.el_num + 1, 1] = NodesX
         Nodes_fd[self.el_num + 1:, 1] = NodesX
-        
+
         Nodes_fd[:self.el_num + 1, 2] = NodesY[0]
         Nodes_fd[self.el_num + 1:, 2] = NodesY[1]
-        
+
         self.dXdx = (Nodes_fd - Nodes)/1e-6
         self.dXdx = self.dXdx[:,[1,2]]
-        
+
         fd_height = Height + 1e-6
-        
+
         NodesX = np.linspace(0, Length, self.el_num + 1)
         NodesY = np.linspace(0, fd_height, 2)
-        
+
         Nodes_fd = np.zeros(((self.el_num + 1)*2, 3))
-        
+
         Nodes_fd[:,0] = np.arange(1, (self.el_num+1)*2 + 1)
-        
+
         Nodes_fd[:self.el_num + 1, 1] = NodesX
         Nodes_fd[self.el_num + 1:, 1] = NodesX
-        
+
         Nodes_fd[:self.el_num + 1, 2] = NodesY[0]
         Nodes_fd[self.el_num + 1:, 2] = NodesY[1]
-        
+
         h_fd = (Nodes_fd - Nodes)/1e-6
-        
+
         self.dXdx = np.hstack((self.dXdx, h_fd[:,[1,2]]))
-        
+
         self.VariableNumber =2
-        
-        return 
-    
+
+        return
+
     def LeeFrame(self, el_num, var, Load):
         '''
         Parameters
         ----------
-        var : array of the two memeber lengths.
-    
+        var : array of the two member lengths.
+
         Returns
         -------
-        Two derrivitive vectors aswell as writes the input file.
-    
+        Two derivative vectors aswell as writes the input file.
+
         '''
         self.el_num = el_num
 
@@ -318,35 +321,35 @@ class Mesh(object):
 
         Elements = np.zeros((self.el_num,5))
         Elements[:,0] = np.arange(1,self.el_num+1,1)
-        
+
         element_up = np.array([1,2,4,3])
-        
+
         for i in range(0,int(self.el_num/2),1):
-            
+
             Elements[i,1:] = element_up
             element_up += np.array([2,2,2,2])
-        
+
         element_side = element_up + np.array([1,4,1,1]) - np.array([2,2,2,2])
-        
+
         Elements[int(self.el_num/2),1:] = element_side
         element_side += np.array([4,2,2,1])
         Elements[int(self.el_num/2)+1,1:] = element_side
-    
+
         for i in range(int(self.el_num/2)+2,self.el_num,1):
-        
+
             element_side += np.array([2,2,2,2])
             Elements[i,1:] = element_side
-        
+
         self.Nodes = Nodes
         self.Elements = Elements.astype('int')
         self.LoadNode = int(0.66*(Nodes.shape[0]))*2 + 1
-        
+
         #BC
         DegOfFreedom = np.arange(0, Nodes[-1,0]*2 , 1).reshape(-1,1)
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1,
-                                                              Nodes[-1,0]*2 - 2, 
+                                                              Nodes[-1,0]*2 - 2,
                                                               Nodes[-1,0]*2 - 1]).astype('int')).astype('int')
-        
+
         self.Load = np.zeros((self.Nodes.shape[0]*2,1))
         self.Load[self.LoadNode,0] = Load
 
@@ -408,12 +411,12 @@ class Mesh(object):
 
 #Q8 versions of the meshers
 class Q8Mesh(Mesh):
-    
+
     def SingleElement(self, Length, Height, Load):
-        
+
         self.Nodes = np.zeros((8,3))
         self.Nodes[:,0] = np.arange(1, 9, 1).astype('int')
-        
+
         self.Nodes[:,1:] = np.array([[0, 0],
                                     [1, 0],
                                     [1, 1],
@@ -422,31 +425,31 @@ class Q8Mesh(Mesh):
                                     [1, 0.5],
                                     [0.5, 1],
                                     [0, 0.5]])
-        
+
         self.Nodes[:,1] *= Length
         self.Nodes[:,2] *= Height
-        
+
         self.Elements = np.array([[1, 1, 2, 3, 4, 5, 6, 7, 8]]).astype('int')
-        
+
         DegOfFreedom = np.arange(0, self.Nodes[-1,0]*2 , 1).reshape(-1,1)
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1, 6, 14])).astype('int')
-        
+
         self.Load = np.zeros((8*2,1))
- 
+
         self.Load[2*2 - 2 , 0] = 1/6*Load
-        
+
         self.Load[3*2 - 2 , 0] = 1/6*Load
-        
+
         self.Load[6*2 - 2 , 0] = 2/3*Load
 
         self.LoadNode = 3*2 - 2 #x degree of freedom of node 3
 
         self.var_num = 1
         self.VariableNumber = 1
-        
+
         Nodes_fd = np.zeros((8,3))
         Nodes_fd[:,0] = np.arange(1, 9, 1).astype('int')
-        
+
         Nodes_fd[:,1:] = np.array([[0, 0],
                                     [1, 0],
                                     [1, 1],
@@ -455,20 +458,20 @@ class Q8Mesh(Mesh):
                                     [1, 0.5],
                                     [0.5, 1],
                                     [0, 0.5]])
-        
+
         Nodes_fd[:,1] *= (Length + 1e-6)
         Nodes_fd[:,2] *= Height
-        
+
         dXdx = (Nodes_fd - self.Nodes)/1e-6
-        
+
         self.dXdx = dXdx[:,1:]
-        
-        return 
-    
+
+        return
+
     def SimpleBeam(self, el_num, Length, Height, Load):
         '''
         A simple 1 element thick cantilever beam. Pinned at the left edge and point loaded at the right.
-        
+
         Parameters
         ----------
         el_num : Number of elements.
@@ -495,49 +498,49 @@ class Q8Mesh(Mesh):
         Nodes[:el_num*2 + 1, 2] = NodesY[0]
         Nodes[el_num*2 + 1: el_num*2 + 1 + len(NodesX[0::2]),2] = NodesY[1]
         Nodes[el_num*2 + 1 + len(NodesX[0::2]):, 2] = NodesY[2]
-        
+
         self.Nodes = Nodes
-        
+
         GlobalNumber = np.array([1, 3, 3*el_num+5, 3*el_num+3, 2, 2*el_num+3, 3*el_num+4, 2*el_num+2])
 
         Elements = np.zeros((el_num, 9))
         Elements[:,0] = np.arange(1, el_num+1,1)
         for i in range(el_num):
-            
+
             Elements[i,1:] = GlobalNumber
             GlobalNumber[0] += 2
             GlobalNumber[1] += 2
             GlobalNumber[4] += 2
-            
+
             GlobalNumber[5] += 1
             GlobalNumber[7] += 1
-            
+
             GlobalNumber[2] += 2
             GlobalNumber[3] += 2
             GlobalNumber[6] += 2
-       
+
         self.Elements = Elements.astype('int')
-        
+
         self.Nodal_coor = Nodes[:,[0]]
         self.var_num = 2
         self.LoadNode = Nodes[-1,0]
-        
+
         #BC
         DegOfFreedom = np.arange(0, Nodes[-1,0]*2 , 1).reshape(-1,1)
         self.DegOfFreedom = np.delete(DegOfFreedom, np.array([0, 1, (3*self.el_num + 3)*2 - 2])).astype('int')
-        
+
         self.LoadNode = Nodes[-1, 0].astype('int')*2 - 1
-        
+
         self.Load = np.zeros((self.Nodes.shape[0]*2,1))
         self.Load[-1,0] = Load
-        
+
         # Sensitivity
-        
+
         fd_Length = Length + 1e-6
-        
+
         NodesX = np.linspace(0, fd_Length, el_num*2 + 1)
         NodesY = np.linspace(0, Height, 3)
-        
+
         Nodes_fd = np.zeros((el_num*5 + 3, 3))
 
         Nodes_fd[:,0] = np.arange(1, el_num*5 + 4)
@@ -549,14 +552,14 @@ class Q8Mesh(Mesh):
         Nodes_fd[:el_num*2 + 1, 2] = NodesY[0]
         Nodes_fd[el_num*2 + 1: el_num*2 + 1 + len(NodesX[0::2]),2] = NodesY[1]
         Nodes_fd[el_num*2 + 1 + len(NodesX[0::2]):, 2] = NodesY[2]
-        
+
         self.dXdx = (Nodes_fd - Nodes)/1e-6
         self.dXdx = self.dXdx[:,[1,2]]
-        
+
         self.VariableNumber = 1
-        
-        return 
-    
+
+        return
+
     def SemiCircularArch(self, el_num, r_base, r_design, t, Load):
         '''
         Not implemented for Q8.
