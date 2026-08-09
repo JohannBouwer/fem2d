@@ -30,7 +30,7 @@ def RegisterElement(Name, ElementClass, DerivativeClass = None):
     ----------
     Name : Short name a mesh refers to the element by, for example 'Q4'.
     ElementClass : Element subclass.
-    DerivativeClass : Matching shape derivitive class, needed only if
+    DerivativeClass : Matching shape derivative class, needed only if
                       sensitivities are wanted for this element.
 
     Returns
@@ -58,11 +58,11 @@ def LookupElement(ElementType, Derivative = False):
     Parameters
     ----------
     ElementType : Registered name, or an Element subclass directly.
-    Derivative : Return the shape derivitive class instead of the element.
+    Derivative : Return the shape derivative class instead of the element.
 
     Returns
     -------
-    The element class, or its shape derivitive counterpart.
+    The element class, or its shape derivative counterpart.
     '''
 
     if isinstance(ElementType, type):
@@ -86,7 +86,7 @@ def LookupElement(ElementType, Derivative = False):
         if DerivativeClass is None:
 
             raise ValueError(
-                'No shape derivitive class is registered for {}, so sensitivities '
+                'No shape derivative class is registered for {}, so sensitivities '
                 'are unavailable. Register one with '
                 'RegisterElement(name, {}, dMyElementdX).'.format(Name, Name))
 
@@ -103,7 +103,7 @@ def LookupElement(ElementType, Derivative = False):
 
         if DerivativeClass is None:
 
-            raise ValueError('No shape derivitive class is registered for '
+            raise ValueError('No shape derivative class is registered for '
                              '{!r}, so sensitivities are unavailable.'.format(ElementType))
 
         return DerivativeClass

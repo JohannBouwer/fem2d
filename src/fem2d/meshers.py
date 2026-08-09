@@ -10,7 +10,7 @@ class Mesh(object):
         '''
         Parameters
         ----------
-        E : Youngs modulous.
+        E : Youngs modulus.
         v : poission ratio.
         thickness : thickness in the 3rd dimensions.
         plane : plane strain or plane stress. 
@@ -43,7 +43,7 @@ class Mesh(object):
 
         Returns
         -------
-        dXdx : (NumNodes, 2*NumVariables) derivitive of every nodal co-ordinate
+        dXdx : (NumNodes, 2*NumVariables) derivative of every nodal co-ordinate
                w.r.t each design variable, laid out as the solvers expect.
 
         '''
@@ -65,7 +65,7 @@ class Mesh(object):
         Parameters
         ----------
         el_num : Number of elements.
-        var : array of the two memeber lengths.
+        var : array of the two member lengths.
 
         Returns
         -------
@@ -307,11 +307,11 @@ class Mesh(object):
         '''
         Parameters
         ----------
-        var : array of the two memeber lengths.
+        var : array of the two member lengths.
     
         Returns
         -------
-        Two derrivitive vectors aswell as writes the input file.
+        Two derivative vectors aswell as writes the input file.
     
         '''
         self.el_num = el_num

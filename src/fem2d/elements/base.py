@@ -32,9 +32,9 @@ class Element(ABC):
         '''
         Parameters
         ----------
-        NodeCoor : array of gloabl nodal co-oridinates.
+        NodeCoor : array of global nodal co-ordinates.
         t : thickness of the element.
-        E : Youngs Modulous.
+        E : Youngs Modulus.
         v : Poissons ratio.
         plane : even = Plane Stress, odd = Plane Strain.
         LinearFlag; Changes element to nonlinear implementation.
@@ -83,27 +83,27 @@ class Element(ABC):
 
         Returns
         -------
-        (2, NumNodes) array of shape function derivitives, row 0 with respect
+        (2, NumNodes) array of shape function derivatives, row 0 with respect
         to xi and row 1 with respect to eta.
         '''
 
-    def GuassPointsAndWeights(self, GuassPoints = None):
+    def GaussPointsAndWeights(self, GaussPoints = None):
         '''
         Parameters
         ----------
-        GuassPoints : Number of Guass points, or None to use the element's
+        GaussPoints : Number of Gauss points, or None to use the element's
                       own QuadOrder.
 
         Returns
         -------
-        gp, gw : Guass points and weights.
+        gp, gw : Gauss points and weights.
         '''
 
-        if GuassPoints is None:
+        if GaussPoints is None:
 
-            GuassPoints = self.QuadOrder
+            GaussPoints = self.QuadOrder
 
-        return np.polynomial.legendre.leggauss(GuassPoints)
+        return np.polynomial.legendre.leggauss(GaussPoints)
 
     def C(self):
         '''
@@ -217,7 +217,7 @@ class Element(ABC):
 
         Returns
         -------
-        detJ : determint of the Jacobian Matrix.
+        detJ : determinant of the Jacobian Matrix.
         '''
         
         detJ = np.linalg.det(self.Jacobian(xi, eta))
@@ -382,13 +382,13 @@ class Element(ABC):
 
         Returns
         -------
-        Ke : Element Stiffness Matrix as a function of the local co-oridinates.
+        Ke : Element Stiffness Matrix as a function of the local co-ordinates.
         
         BT * C * B * detJ
         
-        B: Strian Matirx
+        B: Strain Matirx
         C: Constitutive relationship (strain - stress)
-        detJ: Relates the area of the element in the local co-ordinates to the global co-oridinates.
+        detJ: Relates the area of the element in the local co-ordinates to the global co-ordinates.
 
         '''
         Ke = self.B(xi, eta).T @ self.C() @ self.B(xi, eta)*self.detJ(xi, eta)
@@ -430,11 +430,11 @@ class Element(ABC):
         
         return Kt * self.detJ(xi, eta)
     
-    def StiffMatrix(self, GuassPoints = None):
+    def StiffMatrix(self, GaussPoints = None):
         '''
         Parameters
         ----------
-        GuassPoints : Select the number of Guass points.
+        GaussPoints : Select the number of Gauss points.
                       The default is 2.
 
         Returns
@@ -443,7 +443,7 @@ class Element(ABC):
         '''
             
         StiffMatrix = np.zeros((self.NumDOF, self.NumDOF))
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -453,11 +453,11 @@ class Element(ABC):
                      
         return StiffMatrix
     
-    def ResTangent(self, GuassPoints = None):
+    def ResTangent(self, GaussPoints = None):
         '''
         Parameters
         ----------
-        GuassPoints : Number of Guass Points
+        GaussPoints : Number of Gauss Points
             DESCRIPTION. The default is 2.
 
         Returns
@@ -469,7 +469,7 @@ class Element(ABC):
         TangentMatrix = np.zeros((self.NumDOF, self.NumDOF))
         ResidualVector = np.zeros((self.NumDOF, 1))
         
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
         
         for Xi, Wxi in zip(gp, gw):
             

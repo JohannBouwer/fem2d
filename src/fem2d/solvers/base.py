@@ -54,7 +54,7 @@ class Solver(ABC):
         '''
         Parameters
         ----------
-        Derivative : Return the shape derivitive class instead of the element.
+        Derivative : Return the shape derivative class instead of the element.
 
         Returns
         -------
@@ -183,10 +183,10 @@ class Solver(ABC):
 
         for el in range(Mesh.Elements.shape[0]):
 
-            #coordinates in the gloabl stiff matrix
+            #coordinates in the global stiff matrix
             KCoor = self._ElementDOF(el)
 
-            #Node gloabl coordinates
+            #Node global coordinates
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, 1:]
 
             Ke = Element(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane).StiffMatrix()
@@ -211,7 +211,7 @@ class Solver(ABC):
         '''
 
         Mesh = self.Mesh
-        dXdx = Mesh.dXdx[:, 2*var : 2*var+2].reshape(Mesh.Nodes.shape[0]*2) # Derivitive of node coordinate w.r.t the design variable
+        dXdx = Mesh.dXdx[:, 2*var : 2*var+2].reshape(Mesh.Nodes.shape[0]*2) # Derivative of node coordinate w.r.t the design variable
 
         for GlobalDOF in np.flatnonzero(dXdx): #only the coordinates the variable moves
 
@@ -237,7 +237,7 @@ class Solver(ABC):
 
         Returns
         -------
-        dKdx : Derivitive of the global stiffness matrix w.r.t the design
+        dKdx : Derivative of the global stiffness matrix w.r.t the design
                variable, in sparse CSR form, accumulated over every nodal
                co-ordinate the variable moves.
 
@@ -269,7 +269,7 @@ class Solver(ABC):
 
         Returns
         -------
-        dRdx : Derivitive of the global residual vector w.r.t the design
+        dRdx : Derivative of the global residual vector w.r.t the design
                variable, accumulated over every nodal co-ordinate the variable
                moves.
 
@@ -315,10 +315,10 @@ class Solver(ABC):
 
         for el in range(Mesh.Elements.shape[0]):
 
-            #coordinates in the gloabl stiff matrix
+            #coordinates in the global stiff matrix
             KCoor = self._ElementDOF(el)
 
-            #Node gloabl coordinates
+            #Node global coordinates
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, 1:]
 
             U = Mesh.U[KCoor,:]

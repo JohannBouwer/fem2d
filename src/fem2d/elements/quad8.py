@@ -45,7 +45,7 @@ class Q8(Element):
 
         Returns
         -------
-        (2, 8) array of shape function derivitives, row 0 with respect to xi
+        (2, 8) array of shape function derivatives, row 0 with respect to xi
         and row 1 with respect to eta.
         '''
 

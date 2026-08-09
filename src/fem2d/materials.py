@@ -41,7 +41,7 @@ def ConstitutiveMatrix(E, v, plane, LinearFlag = True):
     '''
     Parameters
     ----------
-    E : Youngs Modulous.
+    E : Youngs Modulus.
     v : Poissons ratio.
     plane : PlaneState, or an integer under the even/odd convention.
     LinearFlag : Small strain gives the 3x3 engineering shear form; the

@@ -57,9 +57,9 @@ class NonLinearSolver(Solver):
         Sensitivity = self.Sensitivity
         Mesh.U = np.zeros((Mesh.Nodes.shape[0]*2, 1)) # Initialize the displacement vector
         
-        ResNorm = 1 #Intialize the norm of the residual vector
+        ResNorm = 1 #Initialize the norm of the residual vector
         
-        Mesh.AllU = np.zeros((Mesh.Nodes.shape[0]*2, LoadSteps + 1)) #store all displacment increments 
+        Mesh.AllU = np.zeros((Mesh.Nodes.shape[0]*2, LoadSteps + 1)) #store all displacement increments 
         
         LoadStep = Mesh.Load/LoadSteps
         Mesh.LoadValues = np.linspace(0, 1, LoadSteps + 1)
@@ -72,7 +72,7 @@ class NonLinearSolver(Solver):
             Mesh.AllU[:, [i + 1]] += Mesh.U
             
             iter_cnt = 0
-            ResNorm = 1 #Intialize the norm of the residual vector
+            ResNorm = 1 #Initialize the norm of the residual vector
             while ResNorm > tol and iter_cnt < MaxIter:
                 
                 Ktangent, GlobalResidual = self._ResAndTangentAssemble()
@@ -92,7 +92,7 @@ class NonLinearSolver(Solver):
                 
                 ResNorm = np.linalg.norm(Rff)/ResNorm0
                 
-                print('Interation {}, Residual Norm {}'.format(iter_cnt, ResNorm))
+                print('Iteration {}, Residual Norm {}'.format(iter_cnt, ResNorm))
 
                 iter_cnt += 1
 

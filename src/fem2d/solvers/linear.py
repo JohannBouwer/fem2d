@@ -23,7 +23,7 @@ class LinearSolver(Solver):
 
         Returns
         -------
-        U : Full Resultant Displacment Vector.
+        U : Full Resultant Displacement Vector.
 
         '''
 

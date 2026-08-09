@@ -80,9 +80,9 @@ class ArcLengthSolver(Solver):
         
         Mesh.U = np.zeros((Mesh.Nodes.shape[0]*2, 1)) # Initialize the displacement vector
         
-        ResNorm = 1 #Intialize the norm of the residual vector
+        ResNorm = 1 #Initialize the norm of the residual vector
         
-        Mesh.AllU = np.zeros((Mesh.Nodes.shape[0]*2, 1)) #store all displacment increments 
+        Mesh.AllU = np.zeros((Mesh.Nodes.shape[0]*2, 1)) #store all displacement increments 
 
         SignDL = 1 #initialize sign direction for the load update
         Mesh.LoadValues = np.array([[0]]) # store load values
@@ -100,7 +100,7 @@ class ArcLengthSolver(Solver):
         while AccumulatedArcLength < TotalArcLength:
             
             print('-----------------------')
-            print('Accumalted Arc Length {}'.format(np.round(AccumulatedArcLength, 2)))
+            print('Accumulated Arc Length {}'.format(np.round(AccumulatedArcLength, 2)))
             print('-----------------------')
             
             #Previous Arc step values
@@ -110,7 +110,7 @@ class ArcLengthSolver(Solver):
             ArcStep = ArcLength
             iter_cnt = 0
             cut_cnt = 0 #number of times the arc step has been reduced
-            ResNorm = 2*tol #Intialize the norm of the residual vector
+            ResNorm = 2*tol #Initialize the norm of the residual vector
             DU = np.zeros_like(Mesh.U[Mesh.DegOfFreedom,:]) #re-zero the update vector
             DL = 0 # re-zero the update to the load factor
             SignDL0 = SignDL # reset the sign direction
@@ -198,7 +198,7 @@ class ArcLengthSolver(Solver):
 
                     ResNorm = np.linalg.norm((Mesh.Load*Loadfactor - GlobalResidual)[Mesh.DegOfFreedom,:])/ResNorm0
                     
-                    print('Itertion {}, ResNorm {}'.format(iter_cnt, ResNorm))
+                    print('Iteration {}, ResNorm {}'.format(iter_cnt, ResNorm))
                     
                     iter_cnt += 1
                 

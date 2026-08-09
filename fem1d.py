@@ -8,13 +8,13 @@ class Q3(object):
         Parameters
         ----------
         A : Area (ethier constant or a function of global domain)
-        E : Youngs Modulous (ethier constant or a function of global domain)
+        E : Youngs Modulus (ethier constant or a function of global domain)
         NodeCoor : Global Nodal co-ordinates
 
         Description
         -------
         A 1D beam element using quadratic shape functions and 
-        2 points guass quadrature.
+        2 points gauss quadrature.
         '''
         
         self.NodeCoor = NodeCoor
@@ -91,7 +91,7 @@ class Q3(object):
 
         Returns
         -------
-        The inverse of the Jocobain, how a change in gloabl system changes in
+        The inverse of the Jocobain, how a change in global system changes in
         the local system. .
         '''
         return 1/self.dXdXi(Xi)
@@ -120,12 +120,12 @@ class Q3(object):
         The matrix that will be integrated to find the element stiffness matrix (3x3).
         
         BT E B A dXdXi:
-            -BT Transpose of the strian matrix, found from the weighted resudial method as
+            -BT Transpose of the strain matrix, found from the weighted resudial method as
             we assume weight functions same shape functions.
-            -E Youngs Modulous.
+            -E Youngs Modulus.
             -B The strain matrix.
             -A The area of the beam.
-            -dXdXi The mapping from global to local systems needed so that Guass Quad can be used.
+            -dXdXi The mapping from global to local systems needed so that Gauss Quad can be used.
         '''
         
         x = self.X_map(Xi)
@@ -136,7 +136,7 @@ class Q3(object):
         '''
         Returns
         -------
-        Complets a 2 point Guass Quadrature integration to find the 
+        Complets a 2 point Gauss Quadrature integration to find the 
         element stiffness matrix.
         '''
         
@@ -178,7 +178,7 @@ class FEM_Solver(object):
             
             KCoor = [LocalNode1, LocalNode2, LocalNode3]
             
-            #Node gloabl coordinates
+            #Node global coordinates
             
             NodeCoor = self.Mesh.Nodes[self.Mesh.Elements[el, 1:]-1, 1].reshape(-1,1) 
 
@@ -229,7 +229,7 @@ class Mesher(object):
         ----------
         A : Area (ethier constant or a function of global domain)
         L : Length.
-        E : Youngs Modulous (ethier constant or a function of global domain)
+        E : Youngs Modulus (ethier constant or a function of global domain)
         elnum : Number of Elements.
 
         Returns
@@ -307,7 +307,7 @@ class PostProcessing(object):
 
         Returns
         -------
-        Creates a plot of the deformend mesh.
+        Creates a plot of the deformed mesh.
         fig : figure for user editing.
         ax : axes for extra plotting or editing by user.
         '''
@@ -329,7 +329,7 @@ class PostProcessing(object):
 
         Returns
         -------
-        Creates an overlay plot of the undeformend and deformend mesh.
+        Creates an overlay plot of the undeformed and deformed mesh.
         fig : figure for user editing.
         ax : axes for extra plotting or editing by user.
         '''
@@ -358,7 +358,7 @@ class PostProcessing(object):
         ax = fig.add_subplot(111)
         
         for el in range(Mesh.Elements.shape[0]):
-            # Orginal Node gloabl coordinates
+            # Orginal Node global coordinates
             
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, [1]] 
             
@@ -366,13 +366,13 @@ class PostProcessing(object):
             NodeCoorDisp = Mesh.U[Mesh.Elements[el, 1:]-1, [0]]
             
             Element = Q3(Mesh.A, Mesh.E, NodeCoor)
-            ElementDeformend = Q3(Mesh.A, Mesh.E, NodeCoorDisp)
+            ElementDeformed = Q3(Mesh.A, Mesh.E, NodeCoorDisp)
             
             ElementDisp = np.zeros(10)
             GlobalCoor = np.zeros(10)
             for i, xi in enumerate(np.linspace(-1,1,10)):
                 
-                ElementDisp[i] = ElementDeformend.X_map(xi)
+                ElementDisp[i] = ElementDeformed.X_map(xi)
                 GlobalCoor[i] = Element.X_map(xi)
                
             ax.plot(GlobalCoor, ElementDisp)
@@ -399,7 +399,7 @@ class PostProcessing(object):
         ax = fig.add_subplot(111)
         
         for el in range(Mesh.Elements.shape[0]):
-            # Orginal Node gloabl coordinates
+            # Orginal Node global coordinates
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, [1]]
             
             #Displcement of Nodes
@@ -438,7 +438,7 @@ class PostProcessing(object):
         ax = fig.add_subplot(111)
         
         for el in range(Mesh.Elements.shape[0]):
-            # Orginal Node gloabl coordinates
+            # Orginal Node global coordinates
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, [1]] 
             
             #Displcement of Nodes
@@ -477,7 +477,7 @@ class PostProcessing(object):
         ax = fig.add_subplot(111)
         
         for el in range(Mesh.Elements.shape[0]):
-            # Orginal Node gloabl coordinates
+            # Orginal Node global coordinates
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, [1]]
             
             #Displcement of Nodes

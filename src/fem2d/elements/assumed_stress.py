@@ -23,7 +23,7 @@ class FiveBeta(Q4):
 
         Returns
         -------
-        P : Interpolation Matris for the assumend Stress Element.
+        P : Interpolation Matrix for the assumed Stress Element.
 
         This is the classical Pian-Sumihara stress field, in which the
         coefficients of the xi derivative (a1, b1) multiply eta and those of
@@ -131,11 +131,11 @@ class FiveBeta(Q4):
 
         return L
     
-    def StiffMatrix(self, GuassPoints = None):
+    def StiffMatrix(self, GaussPoints = None):
         '''
         Parameters
         ----------
-        GuassPoints : Select the number of Guass points.
+        GaussPoints : Select the number of Gauss points.
                       The default is 2.
 
         Returns
@@ -146,7 +146,7 @@ class FiveBeta(Q4):
         G = np.zeros((self.NumDOF, self.NumBeta))
         H = np.zeros((self.NumBeta, self.NumBeta))
             
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
     
         for Xi, Wxi in zip(gp, gw):
             
@@ -160,11 +160,11 @@ class FiveBeta(Q4):
         
         return StiffMatrix
     
-    def ResTangent(self, GuassPoints = None):
+    def ResTangent(self, GaussPoints = None):
         '''
         Parameters
         ----------
-        GuassPoints : Number of Guass Points
+        GaussPoints : Number of Gauss Points
             DESCRIPTION. The default is 2.
 
         Returns
@@ -178,7 +178,7 @@ class FiveBeta(Q4):
         M = np.zeros((self.NumBeta, 1))
         L = np.zeros((self.NumDOF, self.NumDOF))
 
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
 
         for Xi, Wxi in zip(gp, gw):
 

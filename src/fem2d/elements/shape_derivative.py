@@ -19,7 +19,7 @@ from fem2d.elements.quad8 import Q8
 
 class ShapeDerivative(Element):
     '''
-    Mixin adding the nodal co-ordinate derivitives to any Element.
+    Mixin adding the nodal co-ordinate derivatives to any Element.
 
     Mix in front of the element being differentiated so that QuadOrder,
     NumNodes and the shape functions are inherited from it. That inheritance
@@ -34,11 +34,11 @@ class ShapeDerivative(Element):
         ----------
         xi : Local variable 1.
         eta : Local variable 2.
-        DOF : Local degree of freedom to take the derivitive w.r.t .
+        DOF : Local degree of freedom to take the derivative w.r.t .
 
         Returns
         -------
-        Derivitive of the Jacobian w.r.t the nodal Coordinates.
+        Derivative of the Jacobian w.r.t the nodal Coordinates.
 
         '''
 
@@ -58,7 +58,7 @@ class ShapeDerivative(Element):
 
         Returns
         -------
-        Derivitive of the Inverse of the Jacobian w.r.t
+        Derivative of the Inverse of the Jacobian w.r.t
         the nodal Coordinates.
         '''
         
@@ -78,7 +78,7 @@ class ShapeDerivative(Element):
 
         Returns
         -------
-        Derivitive of the determint of the Jacobian w.r.t the
+        Derivative of the determinant of the Jacobian w.r.t the
         the nodal coordinates.
         
         This uses the Jacobi's formula':
@@ -98,7 +98,7 @@ class ShapeDerivative(Element):
         
         Returns
         -------
-        Derivitive of the strain matrix w.r.t
+        Derivative of the strain matrix w.r.t
         the nodal co-ordinates.
 
         '''
@@ -129,11 +129,11 @@ class ShapeDerivative(Element):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
+              the derivative w.r.t .
 
         Returns
         -------
-        dfvecdx : Derivitive of the derformation gradient.
+        dfvecdx : Derivative of the derformation gradient.
 
         '''
         dfvecdx = self.dBdX(xi, eta, DOF).dot(self.U)
@@ -147,11 +147,11 @@ class ShapeDerivative(Element):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
+              the derivative w.r.t .
 
         Returns
         -------
-        dfmatdx : Derivitive of the derformation gradient in matrix form.
+        dfmatdx : Derivative of the derformation gradient in matrix form.
 
         '''
         
@@ -171,11 +171,11 @@ class ShapeDerivative(Element):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
+              the derivative w.r.t .
 
         Returns
         -------
-        devecdx : Derivitive of the Green-Lagrane strain.
+        devecdx : Derivative of the Green-Lagrane strain.
 
         '''
         
@@ -191,11 +191,11 @@ class ShapeDerivative(Element):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
+              the derivative w.r.t .
 
         Returns
         -------
-        dsvecdx : derivitive of the second Piola-Kirchhoff stress vector.
+        dsvecdx : derivative of the second Piola-Kirchhoff stress vector.
         '''
         
         dsvecdx = self.C().dot(self.dEvecdX(xi, eta, DOF))
@@ -209,11 +209,11 @@ class ShapeDerivative(Element):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
+              the derivative w.r.t .
 
         Returns
         -------
-        Ke : Derivitive of Element Stiffness Matrix as a function of the local co-oridinates.
+        Ke : Derivative of Element Stiffness Matrix as a function of the local co-ordinates.
         
         K = BT * C * B * detJ
         dK = dBT * C * B * detJ 
@@ -234,11 +234,11 @@ class ShapeDerivative(Element):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
+              the derivative w.r.t .
 
         Returns
         -------
-        drdx : Derivitive of the Element Residual as a functio of the local coordinates.
+        drdx : Derivative of the Element Residual as a function of the local coordinates.
 
         '''
         drdx = (np.linalg.multi_dot([self.dBdX(xi, eta, DOF).T, self.Fmat(xi, eta), self.Svec(xi, eta)])*self.detJ(xi, eta) 
@@ -248,14 +248,14 @@ class ShapeDerivative(Element):
         
         return drdx
     
-    def Integrate(self, DOF, GuassPoints = None):
+    def Integrate(self, DOF, GaussPoints = None):
         '''
         Parameters
         ----------
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
-        GuassPoints : TYPE, int
-            Number of Gueass Points to use. The default is 2.
+              the derivative w.r.t .
+        GaussPoints : TYPE, int
+            Number of Gauss Points to use. The default is 2.
 
         Returns
         -------
@@ -263,7 +263,7 @@ class ShapeDerivative(Element):
 
         '''
         SensMatrix = np.zeros((self.NumDOF, self.NumDOF))
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -273,14 +273,14 @@ class ShapeDerivative(Element):
                      
         return SensMatrix
     
-    def ResIntegrate(self, DOF, GuassPoints = None):
+    def ResIntegrate(self, DOF, GaussPoints = None):
         '''
         Parameters
         ----------
         DOF : Local degree of freedom to take
-              the derivitive w.r.t.
-        GuassPoints : TYPE, int
-            Number of Gueass Points to use. The default is 2.
+              the derivative w.r.t.
+        GaussPoints : TYPE, int
+            Number of Gauss Points to use. The default is 2.
 
         Returns
         -------
@@ -288,7 +288,7 @@ class ShapeDerivative(Element):
 
         '''
         SensResidual = np.zeros((self.NumDOF, 1))
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -300,11 +300,11 @@ class ShapeDerivative(Element):
 
 
 class dQ4dX(ShapeDerivative, Q4):
-    '''Shape derivitives of the four node quadrilateral.'''
+    '''Shape derivatives of the four node quadrilateral.'''
 
 
 class dQ8dX(ShapeDerivative, Q8):
-    '''Shape derivitives of the eight node quadrilateral.'''
+    '''Shape derivatives of the eight node quadrilateral.'''
 
 
 class d5BdX(ShapeDerivative, FiveBeta):
@@ -316,11 +316,11 @@ class d5BdX(ShapeDerivative, FiveBeta):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t.
+              the derivative w.r.t.
 
         Returns
         -------
-        dPdX : derivitive of the Interpolation Matrix for the assumend Stress Element.
+        dPdX : derivative of the Interpolation Matrix for the assumed Stress Element.
         '''
         
         mat = 1/4*np.array([[-1, 1, 1, -1],
@@ -381,11 +381,11 @@ class d5BdX(ShapeDerivative, FiveBeta):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t.
+              the derivative w.r.t.
 
         Returns
         -------
-        dHdX : derivitive of the local varible He for the assumend stress element.
+        dHdX : derivative of the local variable He for the assumed stress element.
         '''
         
         dHdX = (self.P(xi, eta).T @ np.linalg.inv(self.C()) @ self.P(xi, eta) * self.ddetJdX(xi, eta, DOF)
@@ -401,11 +401,11 @@ class d5BdX(ShapeDerivative, FiveBeta):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t.
+              the derivative w.r.t.
 
         Returns
         -------
-        dMdX : derivitive of the local varible Me for the assumend stress element.
+        dMdX : derivative of the local variable Me for the assumed stress element.
         '''
         #0.5*(Fvec_to_Fmat(d_Fec)'*Fvec + Fmat'*d_Fec)
         #t1 = 0.5*self.dFmatdX(xi, eta, DOF).T @ self.Fvec(xi, eta) + self.Fmat(xi, eta).T @ self.dFvecdX(xi, eta, DOF)
@@ -423,11 +423,11 @@ class d5BdX(ShapeDerivative, FiveBeta):
         xi : Local variable 1.
         eta : Local variable 2.
         DOF : Local degree of freedom to take
-              the derivitive w.r.t.
+              the derivative w.r.t.
 
         Returns
         -------
-        dGdX : derivitive of the local varible Ge for the assumend stress element.
+        dGdX : derivative of the local variable Ge for the assumed stress element.
         '''
         
         if self.LinearFlag:
@@ -444,14 +444,14 @@ class d5BdX(ShapeDerivative, FiveBeta):
             
         return dGdX
     
-    def Integrate(self, DOF, GuassPoints = None): 
+    def Integrate(self, DOF, GaussPoints = None): 
         '''
         Parameters
         ----------
         DOF : Local degree of freedom to take
-              the derivitive w.r.t .
-        GuassPoints : TYPE, int
-            Number of Gueass Points to use. The default is 2.
+              the derivative w.r.t .
+        GaussPoints : TYPE, int
+            Number of Gauss Points to use. The default is 2.
     
         Returns
         -------
@@ -465,7 +465,7 @@ class d5BdX(ShapeDerivative, FiveBeta):
         dG = np.zeros((self.NumDOF, self.NumBeta))
         dH = np.zeros((self.NumBeta, self.NumBeta))
             
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
     
         for Xi, Wxi in zip(gp, gw):
             
@@ -486,14 +486,14 @@ class d5BdX(ShapeDerivative, FiveBeta):
         
         return SensStiffMatrix
 
-    def ResIntegrate(self, DOF, GuassPoints = None):
+    def ResIntegrate(self, DOF, GaussPoints = None):
         '''
         Parameters
         ----------
         DOF : Local degree of freedom to take
-              the derivitive w.r.t.
-        GuassPoints : TYPE, int
-            Number of Gueass Points to use. The default is 2.
+              the derivative w.r.t.
+        GaussPoints : TYPE, int
+            Number of Gauss Points to use. The default is 2.
 
         Returns
         -------
@@ -501,7 +501,7 @@ class d5BdX(ShapeDerivative, FiveBeta):
 
         '''
         SensResidual = np.zeros((self.NumDOF, 1))
-        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+        gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
         
         dG = np.zeros((self.NumDOF, self.NumBeta))
         dH = np.zeros((self.NumBeta, self.NumBeta))

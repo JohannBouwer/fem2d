@@ -70,7 +70,7 @@ def StressMatrix(Mesh, ElementNumber, xi, eta):
 
     return stress
 
-def VonMisses(Mesh, ElementNumber, xi, eta):
+def VonMises(Mesh, ElementNumber, xi, eta):
     '''
     Parameters
     ----------
@@ -100,7 +100,7 @@ def VonMisses(Mesh, ElementNumber, xi, eta):
 
 class Plotting(object):
 
-    def InitialMesh(Mesh, ax = None, alpha = 0.5, shade = True, c = 'b', label = 'Undeformend'):
+    def InitialMesh(Mesh, ax = None, alpha = 0.5, shade = True, c = 'b', label = 'Undeformed'):
         '''
         Parameters
         ----------
@@ -166,7 +166,7 @@ class Plotting(object):
         return ax
         
     
-    def DeformendMesh(Mesh, step = -1, ax = None, alpha = 0.5, shade = True, c = 'b', label = None):
+    def DeformedMesh(Mesh, step = -1, ax = None, alpha = 0.5, shade = True, c = 'b', label = None):
         '''
         Parameters
         ----------
@@ -182,7 +182,7 @@ class Plotting(object):
 
         Returns
         -------
-        A plot of the deformend mesh.
+        A plot of the deformed mesh.
 
         '''
         
@@ -191,26 +191,26 @@ class Plotting(object):
             fig = plt.figure()
             ax = fig.add_subplot(111)
         
-        Deformend = Mesh.Nodes[:,[1,2]] + Mesh.AllU[:, [step]].reshape(Mesh.Nodes[:,[1,2]].shape)
+        Deformed = Mesh.Nodes[:,[1,2]] + Mesh.AllU[:, [step]].reshape(Mesh.Nodes[:,[1,2]].shape)
         cnt = 0
         for pos in Mesh.Elements[:,1:5].astype('int'):
             
             pos = pos - 1
             
-            ax.plot(Deformend[pos,0], Deformend[pos,1],'k.')
+            ax.plot(Deformed[pos,0], Deformed[pos,1],'k.')
             
             for i in range(3):
             
-                ax.plot([Deformend[pos[i],0],Deformend[pos[i+1],0]],[Deformend[pos[i],1],Deformend[pos[i+1],1]],'k')
+                ax.plot([Deformed[pos[i],0],Deformed[pos[i+1],0]],[Deformed[pos[i],1],Deformed[pos[i+1],1]],'k')
             
-            ax.plot([Deformend[pos[3],0],Deformend[pos[0],0]],[Deformend[pos[-1],1],Deformend[pos[0],1]],'k')
+            ax.plot([Deformed[pos[3],0],Deformed[pos[0],0]],[Deformed[pos[-1],1],Deformed[pos[0],1]],'k')
             cnt += 1
             if shade:
                 
                 if cnt == Mesh.Elements[-1,0]:
-                    ax.fill(Deformend[pos,0],Deformend[pos,1], alpha = alpha, color = c, label = 'Deformend')
+                    ax.fill(Deformed[pos,0],Deformed[pos,1], alpha = alpha, color = c, label = 'Deformed')
                 else:
-                    ax.fill(Deformend[pos,0],Deformend[pos,1], alpha = alpha, color = c)
+                    ax.fill(Deformed[pos,0],Deformed[pos,1], alpha = alpha, color = c)
                     
         ax.axis('equal')
                     
@@ -231,7 +231,7 @@ class Plotting(object):
 
         Returns
         -------
-        An overlay plot of the initial and deformend mesh.
+        An overlay plot of the initial and deformed mesh.
 
         '''
         if ax == None:
@@ -253,7 +253,7 @@ class Plotting(object):
         
         for s, a in zip(LoadSteps, alphas):
         
-            Plotting.DeformendMesh(Mesh, step = s, ax = ax, c = c[1], alpha = a, shade = True)
+            Plotting.DeformedMesh(Mesh, step = s, ax = ax, c = c[1], alpha = a, shade = True)
             
         return ax
     
