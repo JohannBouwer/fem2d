@@ -1,7 +1,12 @@
 import numpy as np
 
 class Q4(object):
-    
+
+    # Default quadrature order for this element. The matching dQ4dX/d5BdX
+    # sensitivity classes inherit it, so a derivative can never be integrated
+    # at a different order than the quantity it differentiates.
+    QuadOrder = 2
+
     def __init__(self, NodeCoor, t, E, v, plane, LinearFlag = True, U = None):
         '''
         Parameters
@@ -29,18 +34,36 @@ class Q4(object):
         self.N4 = lambda xi, eta : 1/4 * (1 - xi)*(1 + eta)
         
         #Shape Function Derivitives
-        self.dN1dXi = lambda xi, eta : -1/4 * (1 - xi)
-        self.dN2dXi = lambda xi, eta : 1/4 * (1 - xi)
-        self.dN3dXi = lambda xi, eta : 1/4 * (1 + xi)
-        self.dN4dXi = lambda xi, eta : -1/4 * (1 + xi)
-        
-        self.dN1dEta = lambda xi, eta : -1/4 * (1 - eta)
-        self.dN2dEta = lambda xi, eta : -1/4 * (1 + eta)
-        self.dN3dEta = lambda xi, eta : 1/4 * (1 + eta)
-        self.dN4dEta = lambda xi, eta : 1/4 * (1 - eta)
+        self.dN1dXi = lambda xi, eta : -1/4 * (1 - eta)
+        self.dN2dXi = lambda xi, eta : 1/4 * (1 - eta)
+        self.dN3dXi = lambda xi, eta : 1/4 * (1 + eta)
+        self.dN4dXi = lambda xi, eta : -1/4 * (1 + eta)
+
+        self.dN1dEta = lambda xi, eta : -1/4 * (1 - xi)
+        self.dN2dEta = lambda xi, eta : -1/4 * (1 + xi)
+        self.dN3dEta = lambda xi, eta : 1/4 * (1 + xi)
+        self.dN4dEta = lambda xi, eta : 1/4 * (1 - xi)
         
         return 
     
+    def GuassPointsAndWeights(self, GuassPoints = None):
+        '''
+        Parameters
+        ----------
+        GuassPoints : Number of Guass points, or None to use the element's
+                      own QuadOrder.
+
+        Returns
+        -------
+        gp, gw : Guass points and weights.
+        '''
+
+        if GuassPoints is None:
+
+            GuassPoints = self.QuadOrder
+
+        return np.polynomial.legendre.leggauss(GuassPoints)
+
     def C(self):
         '''
         Returns
@@ -129,12 +152,12 @@ class Q4(object):
 
         Returns
         -------
-        XY : Global co-ordiantes from local co-ordinates in an element.
+        XY : (2x1) Global co-ordinates of the local point.
 
         '''
-        
-        XY = self.N(xi, eta) @ self.NodeCoor
-        
+
+        XY = self.N(xi, eta) @ self.NodeCoor.reshape(-1, 1)
+
         return XY
     
     def Jacobian(self, xi, eta):
@@ -302,6 +325,27 @@ class Q4(object):
         return svec
     
     
+    def StressMat(self, svec):
+        '''
+        Parameters
+        ----------
+        svec : second Piola-Kirchhoff stress vector.
+
+        Returns
+        -------
+        The stress vector arranged as the matrix that pairs with B, so that
+        B.T @ StressMat @ B is the geometric stiffness contribution.
+
+        '''
+        s = svec
+
+        smat = np.array([[s[0,0], 0, s[2,0], 0],
+                         [0, s[1,0], 0, s[2,0]],
+                         [s[2,0], 0, s[1,0], 0],
+                         [0, s[2,0], 0, s[0,0]]])
+
+        return smat
+
     def Smat(self, xi, eta):
         '''
         Parameters
@@ -314,14 +358,8 @@ class Q4(object):
         second Piola-Kirchhoff stress matrix.
 
         '''
-        s = self.Svec(xi, eta)
-        
-        smat = np.array([[s[0,0], 0, s[2,0], 0],
-                         [0, s[1,0], 0, s[2,0]],
-                         [s[2,0], 0, s[1,0], 0],
-                         [0, s[2,0], 0, s[0,0]]])
-        
-        return smat
+
+        return self.StressMat(self.Svec(xi, eta))
     
     def K(self, xi, eta):
         '''
@@ -380,7 +418,7 @@ class Q4(object):
         
         return Kt * self.detJ(xi, eta)
     
-    def StiffMatrix(self, GuassPoints = 2):
+    def StiffMatrix(self, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -393,7 +431,7 @@ class Q4(object):
         '''
             
         StiffMatrix = np.zeros((8,8))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -403,7 +441,7 @@ class Q4(object):
                      
         return StiffMatrix
     
-    def ResTangent(self, GuassPoints = 2):
+    def ResTangent(self, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -419,7 +457,7 @@ class Q4(object):
         TangentMatrix = np.zeros((8,8))
         ResidualVector = np.zeros((8,1))
         
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -444,30 +482,36 @@ class FiveBeta(Q4):
         Returns
         -------
         P : Interpolation Matris for the assumend Stress Element.
+
+        This is the classical Pian-Sumihara stress field, in which the
+        coefficients of the xi derivative (a1, b1) multiply eta and those of
+        the eta derivative (a3, b3) multiply xi. The pairing is tied to the
+        convention used by dN, so the two must only ever be changed together;
+        crossing them makes the element rank deficient.
         '''
         mat = 1/4*np.array([[-1, 1, 1, -1],
                              [1, -1, 1, -1],
                              [-1, -1, 1, 1]])
-        
+
         A = mat @ self.NodeCoor[:,[0]]
         B = mat @ self.NodeCoor[:,[1]]
-        
+
         a1, a3 = A[0,0], A[2, 0]
-        b1, b3 = B[0, 0], B[2, 0] 
-        
+        b1, b3 = B[0, 0], B[2, 0]
+
         if self.LinearFlag:
-            
-            P = np.array([[1, 0, 0, a1**2*xi, a3**2*eta],
-                          [0, 1, 0, b1**2*xi, b3**2*eta],
-                          [0, 0, 1, a1*b1*xi, a3*b3*eta]])
-            
+
+            P = np.array([[1, 0, 0, a1**2*eta, a3**2*xi],
+                          [0, 1, 0, b1**2*eta, b3**2*xi],
+                          [0, 0, 1, a1*b1*eta, a3*b3*xi]])
+
         else:
-            
-             P = np.array([[1, 0, 0, a1**2*xi, a3**2*eta],
-                          [0, 1, 0, b1**2*xi, b3**2*eta],
-                          [0, 0, 1, a1*b1*xi, a3*b3*eta],
-                          [0, 0, 1, a1*b1*xi, a3*b3*eta]])
-             
+
+             P = np.array([[1, 0, 0, a1**2*eta, a3**2*xi],
+                          [0, 1, 0, b1**2*eta, b3**2*xi],
+                          [0, 0, 1, a1*b1*eta, a3*b3*xi],
+                          [0, 0, 1, a1*b1*eta, a3*b3*xi]])
+
         return P
     
     def Ge(self, xi, eta):
@@ -528,23 +572,24 @@ class FiveBeta(Q4):
 
         return M
     
-    def Le(self, xi, eta):
+    def Le(self, xi, eta, svec):
         '''
         Parameters
         ----------
         xi : Local variable 1.
         eta : Local variable 2.
+        svec : Assumed stress vector P @ Beta at the local co-ordinates.
 
         Returns
         -------
         L : Variable needed for Residual and Tangent.
 
         '''
-        L = self.B(xi, eta).T @ self.Smat(xi, eta) @ self.B(xi, eta) * self.detJ(xi, eta)
-        
+        L = self.B(xi, eta).T @ self.StressMat(svec) @ self.B(xi, eta) * self.detJ(xi, eta)
+
         return L
     
-    def StiffMatrix(self, GuassPoints = 2):
+    def StiffMatrix(self, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -559,7 +604,7 @@ class FiveBeta(Q4):
         G = np.zeros((8,5))
         H = np.zeros((5,5))
             
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
     
         for Xi, Wxi in zip(gp, gw):
             
@@ -573,7 +618,7 @@ class FiveBeta(Q4):
         
         return StiffMatrix
     
-    def ResTangent(self, GuassPoints = 2):
+    def ResTangent(self, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -590,31 +635,36 @@ class FiveBeta(Q4):
         H = np.zeros((5,5))
         M = np.zeros((5,1))
         L = np.zeros((8,8))
-            
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
-    
+
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
+
         for Xi, Wxi in zip(gp, gw):
-            
+
             for Eta, Weta in zip(gp, gw):
-                
+
                 M += self.Me(Xi, Eta) * Wxi * Weta
-                
+
                 H += self.He(Xi, Eta) * Wxi * Weta
-        
-        B = np.linalg.inv(H) @ M
-        
-        for Xi, Wxi in zip(gp, gw):
-            
-            for Eta, Weta in zip(gp, gw):
-                
+
                 G += self.Ge(Xi, Eta) * Wxi * Weta
-                
-                L += self.Le(Xi, Eta) * Wxi * Weta
+
+        B = np.linalg.inv(H) @ M
+
+        # The geometric term is the derivative of G(u) @ Beta, so it must be
+        # evaluated with the assumed stress P @ Beta. Using the displacement
+        # derived stress C @ Evec instead leaves the tangent inconsistent,
+        # which costs quadratic Newton convergence and corrupts every
+        # sensitivity that solves with this matrix.
+        for Xi, Wxi in zip(gp, gw):
+
+            for Eta, Weta in zip(gp, gw):
+
+                L += self.Le(Xi, Eta, self.P(Xi, Eta) @ B) * Wxi * Weta
 
         ResidualVector = self.t * G @ B
-       
+
         TangentMatrix = self.t * (L + G @ np.linalg.inv(H) @ G.T)
-        
+
         return TangentMatrix, ResidualVector
         
         

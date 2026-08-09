@@ -3,6 +3,9 @@ from fem2d.elements4Node import Q4
 from numpy.polynomial.legendre import leggauss
 
 class Q8(Q4): #inherit unspecified functions from Q4 class
+
+    QuadOrder = 3
+
     def __init__(self, NodeCoor, t, E, v, plane, LinearFlag = True, U = None):
         '''
         Parameters
@@ -95,26 +98,6 @@ class Q8(Q4): #inherit unspecified functions from Q4 class
         
         return dN
     
-    def Map(self, xi, eta):
-        '''
-        
-        FIX THE SHAPES
-        
-        Parameters
-        ----------
-        xi : Local variable 1.
-        eta : Local variable 2.
-
-        Returns
-        -------
-        XY : Global co-ordiantes from local co-ordinates in an element.
-
-        '''
-        
-        XY = self.N(xi, eta) @ self.NodeCoor
-        
-        return XY
-    
     def Jacobian(self, xi, eta):
         '''
         Parameters
@@ -137,7 +120,7 @@ class Q8(Q4): #inherit unspecified functions from Q4 class
 
         return J
 
-    def StiffMatrix(self, GuassPoints = 3):
+    def StiffMatrix(self, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -150,7 +133,7 @@ class Q8(Q4): #inherit unspecified functions from Q4 class
         '''
             
         StiffMatrix = np.zeros((16,16))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -161,7 +144,7 @@ class Q8(Q4): #inherit unspecified functions from Q4 class
         return StiffMatrix
         
     
-    def ResTangent(self, GuassPoints = 3):
+    def ResTangent(self, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -177,7 +160,7 @@ class Q8(Q4): #inherit unspecified functions from Q4 class
         TangentMatrix = np.zeros((16,16))
         ResidualVector = np.zeros((16,1))
         
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             

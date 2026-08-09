@@ -226,7 +226,7 @@ class dQ4dX(Q4):
         
         return drdx
     
-    def Integrate(self, DOF, GuassPoints = 2):
+    def Integrate(self, DOF, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -241,7 +241,7 @@ class dQ4dX(Q4):
 
         '''
         SensMatrix = np.zeros((8,8))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -251,7 +251,7 @@ class dQ4dX(Q4):
                      
         return SensMatrix
     
-    def ResIntegrate(self, DOF, GuassPoints = 2):
+    def ResIntegrate(self, DOF, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -266,7 +266,7 @@ class dQ4dX(Q4):
 
         '''
         SensResidual = np.zeros((8,1))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -487,7 +487,7 @@ class dQ8dX(Q8):
         
         return djdx
     
-    def Integrate(self, DOF, GuassPoints = 3):
+    def Integrate(self, DOF, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -502,7 +502,7 @@ class dQ8dX(Q8):
 
         '''
         SensMatrix = np.zeros((16,16))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -512,7 +512,7 @@ class dQ8dX(Q8):
                      
         return SensMatrix
     
-    def ResIntegrate(self, DOF, GuassPoints = 2):
+    def ResIntegrate(self, DOF, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -527,7 +527,7 @@ class dQ8dX(Q8):
 
         '''
         SensResidual = np.zeros((16,1))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         for Xi, Wxi in zip(gp, gw):
             
@@ -571,10 +571,11 @@ class d5BdX(dQ4dX, FiveBeta):
             dA = mat @ dX
             
             da1, da3 = dA[0,0], dA[2, 0]
-            
-            dP = np.array([[0, 0, 0, 2*a1*da1*xi, 2*a3*da3*eta],
+
+            #xi/eta pairing follows FiveBeta.P
+            dP = np.array([[0, 0, 0, 2*a1*da1*eta, 2*a3*da3*xi],
                            [0, 0, 0, 0, 0],
-                           [0, 0, 0, b1*da1*xi, b3*da3*eta]])
+                           [0, 0, 0, b1*da1*eta, b3*da3*xi]])
            
             
         else:
@@ -584,10 +585,11 @@ class d5BdX(dQ4dX, FiveBeta):
             dB = mat @ dX
             
             db1, db3 = dB[0,0], dB[2, 0]
-            
+
+            #xi/eta pairing follows FiveBeta.P
             dP = np.array([[0, 0, 0, 0, 0],
-                           [0, 0, 0, 2*b1*db1*xi, 2*b3*db3*eta],
-                           [0, 0, 0, a1*db1*xi, a3*db3*eta]])
+                           [0, 0, 0, 2*b1*db1*eta, 2*b3*db3*xi],
+                           [0, 0, 0, a1*db1*eta, a3*db3*xi]])
             
             
         if self.LinearFlag:
@@ -673,7 +675,7 @@ class d5BdX(dQ4dX, FiveBeta):
             
         return dGdX
     
-    def Integrate(self, DOF, GuassPoints = 2): 
+    def Integrate(self, DOF, GuassPoints = None): 
         '''
         Parameters
         ----------
@@ -694,7 +696,7 @@ class d5BdX(dQ4dX, FiveBeta):
         dG = np.zeros((8,5))
         dH = np.zeros((5,5))
             
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
     
         for Xi, Wxi in zip(gp, gw):
             
@@ -715,7 +717,7 @@ class d5BdX(dQ4dX, FiveBeta):
         
         return SensStiffMatrix
 
-    def ResIntegrate(self, DOF, GuassPoints = 2):
+    def ResIntegrate(self, DOF, GuassPoints = None):
         '''
         Parameters
         ----------
@@ -730,7 +732,7 @@ class d5BdX(dQ4dX, FiveBeta):
 
         '''
         SensResidual = np.zeros((8,1))
-        gp, gw = np.polynomial.legendre.leggauss(GuassPoints) #guass points and weights
+        gp, gw = self.GuassPointsAndWeights(GuassPoints) #guass points and weights
         
         dG = np.zeros((8,5))
         dH = np.zeros((5,5))
