@@ -32,6 +32,9 @@ The `notebooks/` directory contains worked examples, each executed with its outp
   against a central finite difference, plus the load factor sensitivity along an arc length path.
 - **`Example_optimisation.ipynb`** — shape optimisation with `scipy.optimize.minimize`, finding the
   cantilever length that deflects to a target under a fixed load, driven by the analytical gradient.
+- **`Example_custom_element.ipynb`** — how to add your own element. Builds a four node quadrilateral
+  interpolated with sin² and cos², which turns out to be Q4 in disguise but with an integrand Gauss
+  quadrature cannot integrate exactly, so it doubles as a lesson in choosing a quadrature rule.
 
 
 
