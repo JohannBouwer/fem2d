@@ -76,6 +76,10 @@ class ArcLengthSolver(Solver):
         psi, tol, MaxIter, MaxCuts = self.psi, self.tol, self.MaxIter, self.MaxCuts
         Sensitivity = self.Sensitivity
 
+        # Records which strain measure the result belongs to, so post processing
+        # knows whether to read it as small strain or finite strain.
+        Mesh.LargeDeflection = True
+
         Mesh.U = np.zeros((Mesh.Nodes.shape[0]*2, 1)) # Initialize the displacement vector
 
         ResNorm = 1 #Initialize the norm of the residual vector
