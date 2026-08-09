@@ -36,6 +36,21 @@ and `Beam.dUdx` holds the analytical shape sensitivities as well. Solver progres
 `fem2d.solvers` logger rather than to stdout, so `logging.basicConfig(level=logging.INFO)`
 turns it on.
 
+Fields are contoured on the deformed or undeformed mesh:
+
+```python
+from fem2d.postprocessing import ContourOptions
+
+Plotting.StressContour(Beam, ContourOptions(Component='vonMises'))
+Plotting.StrainContour(Beam, ContourOptions(Component='xy', Deformed=False))
+```
+
+Stress and strain are discontinuous between elements, so `Recovery` chooses what happens at
+the nodes: `'extrapolate'` (default) samples at the Gauss points where the stress is most
+accurate and fits back to the nodes before averaging, `'average'` evaluates at the nodes and
+averages there, and `'none'` leaves each element with its own values so the jumps stay
+visible. `NodalField` returns the same numbers without plotting.
+
 ## Features
 - Supports **three element types**, **three solvers**, and **three meshers** for simple structural problems.
 - Developed with a focus on **nonlinear structural analysis** and **design sensitivity analysis**.
