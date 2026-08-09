@@ -8,8 +8,7 @@ from fem2d.elements.assumed_stress import FiveBeta
 from fem2d.elements.base import Element
 from fem2d.elements.quad4 import Q4
 from fem2d.elements.quad8 import Q8
-from fem2d.elements.registry import (LookupElement, RegisterElement,
-                                     RegisteredElements)
+from fem2d.elements.registry import LookupElement, RegisteredElements, RegisterElement
 from fem2d.elements.shape_derivative import ShapeDerivative, d5BdX, dQ4dX, dQ8dX
 
 RegisterElement('Q4', Q4, dQ4dX)

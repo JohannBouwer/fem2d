@@ -21,3 +21,37 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fem2d"]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]
+extend-exclude = ["notebooks"]  # generated, and their outputs are not ours to lint
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "G",    # logging format
+    "RET",  # return
+]
+ignore = [
+    # This codebase deliberately uses PascalCase for methods, parameters and
+    # locals, matching the finite element notation it implements, so the
+    # pep8-naming rules are not enabled at all.
+    "E741",  # ambiguous names: l, I and O read naturally in this notation
+    "E226",  # missing whitespace around arithmetic: formulae are denser without
+    "E731",  # lambda assignment
+    # Naming a result before returning it is deliberate here: the name matches
+    # the Returns section of the docstring, which is how the formulae are
+    # cross referenced against the derivation.
+    "RET504",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/fem2d/elements/__init__.py" = ["E402"]  # registration must follow the imports

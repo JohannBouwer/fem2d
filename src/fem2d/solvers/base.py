@@ -17,6 +17,7 @@ the mesh, so the plotting helpers work with any solver.
 from abc import ABC, abstractmethod
 
 import numpy as np
+import numpy.typing as npt
 from scipy import sparse
 from scipy.sparse import linalg as spla
 
@@ -33,7 +34,7 @@ class Solver(ABC):
     Sensitivity : Compute the design sensitivities alongside the solution.
     '''
 
-    def __init__(self, Mesh, Sensitivity = False):
+    def __init__(self, Mesh, Sensitivity: bool = False):
 
         self.Mesh = Mesh
         self.Sensitivity = Sensitivity
@@ -41,7 +42,7 @@ class Solver(ABC):
         return
 
     @abstractmethod
-    def Solve(self):
+    def Solve(self) -> None:
         '''
         Run the solver, writing the results onto self.Mesh.
 
@@ -50,7 +51,7 @@ class Solver(ABC):
         None.
         '''
 
-    def _ElementClass(self, Derivative = False):
+    def _ElementClass(self, Derivative: bool = False) -> type:
         '''
         Parameters
         ----------
@@ -65,7 +66,7 @@ class Solver(ABC):
 
         return LookupElement(self.Mesh.ElementType, Derivative = Derivative)
 
-    def _ElementDOF(self, el):
+    def _ElementDOF(self, el: int) -> npt.NDArray[np.int64]:
         '''
         Parameters
         ----------
@@ -211,7 +212,8 @@ class Solver(ABC):
         '''
 
         Mesh = self.Mesh
-        dXdx = Mesh.dXdx[:, 2*var : 2*var+2].reshape(Mesh.Nodes.shape[0]*2) # Derivative of node coordinate w.r.t the design variable
+        # Derivative of each node coordinate with respect to the design variable
+        dXdx = Mesh.dXdx[:, 2*var : 2*var+2].reshape(Mesh.Nodes.shape[0]*2)
 
         for GlobalDOF in np.flatnonzero(dXdx): #only the coordinates the variable moves
 
@@ -224,7 +226,7 @@ class Solver(ABC):
             #Transform local node number to local degree of freedom
             LocalDOF = LocalNodes*2 + (GlobalDOF % 2)
 
-            for el, dof in zip(element, LocalDOF):
+            for el, dof in zip(element, LocalDOF, strict=True):
 
                 yield el, dof, dXdx[GlobalDOF]
 

@@ -1,8 +1,12 @@
 """Arc length continuation solver."""
 
+import logging
+
 import numpy as np
 
 from fem2d.solvers.base import Solver
+
+logger = logging.getLogger(__name__)
 
 
 class ArcLengthSolver(Solver):
@@ -21,8 +25,9 @@ class ArcLengthSolver(Solver):
     MaxCuts : Arc step reductions allowed within one step. The default is 12.
     '''
 
-    def __init__(self, Mesh, ArcLength, TotalArcLength, psi = 0, tol = 1e-4,
-                 MaxIter = 8, Sensitivity = False, MaxCuts = 12):
+    def __init__(self, Mesh, ArcLength: float, TotalArcLength: float, psi: float = 0,
+                 tol: float = 1e-4, MaxIter: int = 8, Sensitivity: bool = False,
+                 MaxCuts: int = 12):
 
         super().__init__(Mesh, Sensitivity)
 
@@ -35,25 +40,19 @@ class ArcLengthSolver(Solver):
 
         return
 
-    def Solve(self):
+    def Solve(self) -> None:
         '''
-        Parameters
-        ----------
-        Mesh : Mesh Object from the Mesher Class.
-        ArcLength : Arc Length for each arc step.
-        TotalArcLength : The accumulated arc value to terminated the simulation.
-        tol : Tolerance of the residual before termination.
-            The default is 1e-4.
-        MaxIter : Maximum Number of Newton Iterations before the Arc length is adjusted, 
-                The default is 8.
-        psi : psi value for the constraint equation.
-            The default is 0.
-        MaxCuts : Number of times the arc step may be reduced within one step
-                before giving up. The default is 12.
+        Trace the equilibrium path until TotalArcLength is accumulated.
 
         Returns
         -------
-        None.
+        None. Writes U, AllU and LoadValues onto the mesh, and with
+        Sensitivity on also dUdx, dUdx_All and dLdx.
+
+        Raises
+        ------
+        RuntimeError if an arc step cannot be converged within MaxCuts
+        reductions.
 
         Notes
         -----
@@ -70,19 +69,18 @@ class ArcLengthSolver(Solver):
         and there the end of the path jumps; finite differences straddling such
         a point disagree with the analytical value, which is the correct one
         sided derivative of the branch that was taken.
-
         '''
 
         Mesh = self.Mesh
         ArcLength, TotalArcLength = self.ArcLength, self.TotalArcLength
         psi, tol, MaxIter, MaxCuts = self.psi, self.tol, self.MaxIter, self.MaxCuts
         Sensitivity = self.Sensitivity
-        
+
         Mesh.U = np.zeros((Mesh.Nodes.shape[0]*2, 1)) # Initialize the displacement vector
-        
+
         ResNorm = 1 #Initialize the norm of the residual vector
-        
-        Mesh.AllU = np.zeros((Mesh.Nodes.shape[0]*2, 1)) #store all displacement increments 
+
+        Mesh.AllU = np.zeros((Mesh.Nodes.shape[0]*2, 1)) #store all displacement increments
 
         SignDL = 1 #initialize sign direction for the load update
         Mesh.LoadValues = np.array([[0]]) # store load values
@@ -98,15 +96,14 @@ class ArcLengthSolver(Solver):
 
         cnt_step = 0
         while AccumulatedArcLength < TotalArcLength:
-            
-            print('-----------------------')
-            print('Accumulated Arc Length {}'.format(np.round(AccumulatedArcLength, 2)))
-            print('-----------------------')
-            
+
+            logger.info('Arc step %d, accumulated arc length %.4g of %.4g',
+                        cnt_step + 1, AccumulatedArcLength, TotalArcLength)
+
             #Previous Arc step values
             PrevLoadFactor = np.copy(Loadfactor)
             PrevU = np.copy(Mesh.U)
-            
+
             ArcStep = ArcLength
             iter_cnt = 0
             cut_cnt = 0 #number of times the arc step has been reduced
@@ -116,9 +113,9 @@ class ArcLengthSolver(Solver):
             SignDL0 = SignDL # reset the sign direction
 
             while ResNorm > tol:
-                
+
                 Ktangent, GlobalResidual = self._ResAndTangentAssemble()
-                
+
                 Kff = self._Free(Ktangent, Mesh.DegOfFreedom)
 
                 Rff = (GlobalResidual - Mesh.Load*Loadfactor)[Mesh.DegOfFreedom,:]
@@ -128,10 +125,10 @@ class ArcLengthSolver(Solver):
 
                 aQ = Factor.solve(Mesh.Load[Mesh.DegOfFreedom,:])
                 aR = -1*Factor.solve(Rff)
-                
+
                 # Set up Constants for quadratic equation
                 Uesti = DU + aR
-                
+
                 C1 = aQ.T.dot(aQ) + psi**2
                 C2 = 2*(aQ.T.dot(Uesti)) + 2*psi**2*DL
                 C3 = Uesti.T.dot(Uesti) + psi**2*DL**2 - ArcStep**2
@@ -140,16 +137,16 @@ class ArcLengthSolver(Solver):
 
                 if Discriminant < 0 or iter_cnt > MaxIter : #if not, decrease Arc Length and zero values
 
-                    print("------Adjusting Arc Length-------")
-
                     cut_cnt += 1
+
+                    logger.info('  cutting arc step (cut %d of %d)', cut_cnt, MaxCuts)
 
                     if cut_cnt > MaxCuts:
 
                         raise RuntimeError(
-                            'Arc step could not be converged after {} reductions at an '
-                            'accumulated arc length of {:.4g}. Try a smaller ArcLength, a '
-                            'looser tol, or a larger MaxIter.'.format(MaxCuts, AccumulatedArcLength))
+                            f'Arc step could not be converged after {MaxCuts} reductions at an '
+                            f'accumulated arc length of {AccumulatedArcLength:.4g}. Try a smaller ArcLength, a '
+                            'looser tol, or a larger MaxIter.')
 
                     Loadfactor = np.copy(PrevLoadFactor)
                     DL = 0
@@ -165,55 +162,50 @@ class ArcLengthSolver(Solver):
                     ResNorm = 2*tol
 
                 else: # solve load update
-                    
+
                     D = np.sqrt(Discriminant)
                     sign = DU.T.dot(aQ) + psi**2*DL # sign check
-                    
-                    if iter_cnt > 0: #check first iteration 
-                        
+
+                    if iter_cnt > 0: #check first iteration
+
                         dL1 = (-C2 + D)/(2*C1) # Two posible solutions
                         dL2 = (-C2 - D)/(2*C1)
-                        
-                        if sign*dL1 > sign*dL2:
-                           
-                            dL = dL1
-                        
-                        else:
-                            
-                            dL = dL2
-                    
+
+                        # Take the root that continues in the current direction
+                        dL = dL1 if sign*dL1 > sign*dL2 else dL2
+
                     else:
-                        
+
                         dL = (-C2 + SignDL*D)/(2*C1)
-                   
+
                     # Update arc step values
                     DU += aR + dL*aQ
                     DL += dL
-                    
+
                     Loadfactor += dL[0,0]
-                    
+
                     if iter_cnt == 0:
-                        
+
                         ResNorm0 = np.linalg.norm((Mesh.Load*Loadfactor - GlobalResidual)[Mesh.DegOfFreedom,:])
 
                     ResNorm = np.linalg.norm((Mesh.Load*Loadfactor - GlobalResidual)[Mesh.DegOfFreedom,:])/ResNorm0
-                    
-                    print('Iteration {}, ResNorm {}'.format(iter_cnt, ResNorm))
-                    
+
+                    logger.info('  iteration %d, residual norm %.6e', iter_cnt, ResNorm)
+
                     iter_cnt += 1
-                
+
                     SignDL = np.sign(sign) # sign update
-                    
+
                     # Update global solution vector
                     Mesh.U[Mesh.DegOfFreedom,:] += aR + dL*aQ
-            
+
             # Update total arc length
             AccumulatedArcLength += ArcStep
-            
+
             # store step values
-            Mesh.AllU = np.hstack((Mesh.AllU, Mesh.U)) 
+            Mesh.AllU = np.hstack((Mesh.AllU, Mesh.U))
             Mesh.LoadValues = np.append(Mesh.LoadValues, Loadfactor)
-            
+
             if Sensitivity:
 
                 # The tangent left over from the iteration loop was assembled
@@ -270,5 +262,5 @@ class ArcLengthSolver(Solver):
                     Mesh.dLdx = np.vstack((Mesh.dLdx, dLdx))
 
             cnt_step += 1
-                  
+
         return

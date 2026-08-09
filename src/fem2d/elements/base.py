@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar
 
 import numpy as np
+import numpy.typing as npt
 
 from fem2d.materials import ConstitutiveMatrix
 
@@ -28,7 +29,8 @@ class Element(ABC):
     #: order than the quantity it differentiates.
     QuadOrder: ClassVar[int]
 
-    def __init__(self, NodeCoor, t, E, v, plane, LinearFlag = True, U = None):
+    def __init__(self, NodeCoor: npt.NDArray[np.float64], t: float, E: float, v: float,
+                 plane, LinearFlag: bool = True, U: npt.NDArray[np.float64] | None = None):
         '''
         Parameters
         ----------
@@ -51,7 +53,7 @@ class Element(ABC):
         return
 
     @property
-    def NumDOF(self):
+    def NumDOF(self) -> int:
         '''
         Returns
         -------
@@ -61,7 +63,7 @@ class Element(ABC):
         return 2*self.NumNodes
 
     @abstractmethod
-    def ShapeFunctions(self, xi, eta):
+    def ShapeFunctions(self, xi: float, eta: float) -> npt.NDArray[np.float64]:
         '''
         Parameters
         ----------
@@ -74,7 +76,7 @@ class Element(ABC):
         '''
 
     @abstractmethod
-    def ShapeDerivatives(self, xi, eta):
+    def ShapeDerivatives(self, xi: float, eta: float) -> npt.NDArray[np.float64]:
         '''
         Parameters
         ----------
@@ -87,7 +89,7 @@ class Element(ABC):
         to xi and row 1 with respect to eta.
         '''
 
-    def GaussPointsAndWeights(self, GaussPoints = None):
+    def GaussPointsAndWeights(self, GaussPoints: int | None = None):
         '''
         Parameters
         ----------
@@ -174,7 +176,7 @@ class Element(ABC):
         XY = self.N(xi, eta) @ self.NodeCoor.reshape(-1, 1)
 
         return XY
-    
+
     def Jacobian(self, xi, eta):
         '''
         Parameters
@@ -205,9 +207,9 @@ class Element(ABC):
 
         '''
         InvJ = np.linalg.inv(self.Jacobian(xi, eta))
-        
+
         return InvJ
-    
+
     def detJ(self, xi, eta):
         '''
         Parameters
@@ -219,11 +221,11 @@ class Element(ABC):
         -------
         detJ : determinant of the Jacobian Matrix.
         '''
-        
+
         detJ = np.linalg.det(self.Jacobian(xi, eta))
 
         return detJ
-    
+
     def B(self, xi, eta):
         '''
         Parameters
@@ -235,34 +237,34 @@ class Element(ABC):
         -------
         B : Strain Matrix (8x8).
         '''
-        
+
         if self.LinearFlag:
-            
+
             MapJacobian = np.zeros((3,4))
-            
+
             MapJacobian[2,2] = self.InvJ(xi, eta)[0,0]
             MapJacobian[2,3] = self.InvJ(xi, eta)[0,1]
-            
+
         else:
-            
+
              MapJacobian = np.zeros((4,4))
-             
+
              MapJacobian[3,2] = self.InvJ(xi, eta)[0,0]
              MapJacobian[3,3] = self.InvJ(xi, eta)[0,1]
-                    
+
         MapJacobian[0,0] = self.InvJ(xi, eta)[0,0]
         MapJacobian[0,1] = self.InvJ(xi, eta)[0,1]
-        
+
         MapJacobian[1,2] = self.InvJ(xi, eta)[1,0]
         MapJacobian[1,3] = self.InvJ(xi, eta)[1,1]
-        
+
         MapJacobian[2,0] = self.InvJ(xi, eta)[1,0]
         MapJacobian[2,1] = self.InvJ(xi, eta)[1,1]
-        
+
         B = MapJacobian @ self.dN(xi, eta)
-        
+
         return B
-    
+
     def Fvec(self, xi, eta):
         '''
         Parameters
@@ -276,11 +278,11 @@ class Element(ABC):
 
         '''
         I = np.array([[1, 1, 0, 0]]).T
-        
+
         fvec = I + self.B(xi,eta) @ self.U
-        
+
         return fvec
-    
+
     def Fmat(self, xi, eta):
         '''
         Parameters
@@ -294,14 +296,14 @@ class Element(ABC):
 
         '''
         fvec = self.Fvec(xi, eta)
-        
+
         fmat = np.array([[fvec[0,0], 0, 0.5*fvec[2,0], 0.5*fvec[2,0]],
                          [0, fvec[1,0], 0.5*fvec[3,0], 0.5*fvec[3,0]],
                          [0, fvec[2,0], 0.5*fvec[0,0], 0.5*fvec[0,0]],
                          [fvec[3,0], 0, 0.5*fvec[1,0], 0.5*fvec[1,0]]])
-        
+
         return fmat
-    
+
     def Evec(self, xi, eta):
         '''
         Parameters
@@ -315,11 +317,11 @@ class Element(ABC):
 
         '''
         I = np.array([[1, 1, 0, 0]]).T
-        
+
         evec = 0.5*(self.Fmat(xi, eta).T @ self.Fvec(xi, eta) - I)
-        
+
         return evec
-    
+
     def Svec(self, xi, eta):
         '''
         Parameters
@@ -333,10 +335,10 @@ class Element(ABC):
 
         '''
         svec = self.C() @ self.Evec(xi, eta)
-        
+
         return svec
-    
-    
+
+
     def StressMat(self, svec):
         '''
         Parameters
@@ -372,7 +374,7 @@ class Element(ABC):
         '''
 
         return self.StressMat(self.Svec(xi, eta))
-    
+
     def K(self, xi, eta):
         '''
         Parameters
@@ -383,18 +385,18 @@ class Element(ABC):
         Returns
         -------
         Ke : Element Stiffness Matrix as a function of the local co-ordinates.
-        
+
         BT * C * B * detJ
-        
+
         B: Strain Matirx
         C: Constitutive relationship (strain - stress)
         detJ: Relates the area of the element in the local co-ordinates to the global co-ordinates.
 
         '''
         Ke = self.B(xi, eta).T @ self.C() @ self.B(xi, eta)*self.detJ(xi, eta)
-        
+
         return Ke
-    
+
     def Re(self, xi, eta):
         '''
         Parameters
@@ -405,14 +407,14 @@ class Element(ABC):
         Returns
         -------
         Element residual
-        
+
         R = BT * Fmat * Svec * detJ
 
         '''
         Res = self.B(xi, eta).T @ self.Fmat(xi, eta) @ self.Svec(xi, eta)*self.detJ(xi, eta)
-        
+
         return Res
-    
+
     def KT(self, xi, eta):
         '''
         Parameters
@@ -425,11 +427,12 @@ class Element(ABC):
         Tangent Stiffness matrix
 
         '''
-        
-        Kt = self.B(xi, eta).T @ (self.Smat(xi, eta) + self.Fmat(xi, eta) @ self.C() @ self.Fmat(xi, eta).T) @ self.B(xi, eta)
-        
+
+        Kt = self.B(xi, eta).T @ (self.Smat(xi, eta)
+                                  + self.Fmat(xi, eta) @ self.C() @ self.Fmat(xi, eta).T) @ self.B(xi, eta)
+
         return Kt * self.detJ(xi, eta)
-    
+
     def StiffMatrix(self, GaussPoints = None):
         '''
         Parameters
@@ -441,18 +444,18 @@ class Element(ABC):
         -------
         StiffMatrix : (8x8) Element Stiffness Matrix.
         '''
-            
+
         StiffMatrix = np.zeros((self.NumDOF, self.NumDOF))
         gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
-        
-        for Xi, Wxi in zip(gp, gw):
-            
-            for Eta, Weta in zip(gp, gw):
-                
+
+        for Xi, Wxi in zip(gp, gw, strict=True):
+
+            for Eta, Weta in zip(gp, gw, strict=True):
+
                 StiffMatrix += self.t * self.K(Xi, Eta) * Wxi * Weta
-                     
+
         return StiffMatrix
-    
+
     def ResTangent(self, GaussPoints = None):
         '''
         Parameters
@@ -468,15 +471,15 @@ class Element(ABC):
         '''
         TangentMatrix = np.zeros((self.NumDOF, self.NumDOF))
         ResidualVector = np.zeros((self.NumDOF, 1))
-        
+
         gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
-        
-        for Xi, Wxi in zip(gp, gw):
-            
-            for Eta, Weta in zip(gp, gw):
-                
+
+        for Xi, Wxi in zip(gp, gw, strict=True):
+
+            for Eta, Weta in zip(gp, gw, strict=True):
+
                 TangentMatrix += self.t * self.KT(Xi, Eta) * Wxi * Weta
-                
+
                 ResidualVector += self.t * self.Re(Xi, Eta) * Wxi * Weta
-    
+
         return TangentMatrix, ResidualVector

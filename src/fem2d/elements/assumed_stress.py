@@ -2,6 +2,7 @@ import numpy as np
 
 from fem2d.elements.quad4 import Q4
 
+
 class FiveBeta(Q4):
     '''
     Five parameter assumed stress quadrilateral (Pian-Sumihara).
@@ -13,7 +14,7 @@ class FiveBeta(Q4):
     #: Number of assumed stress parameters, the beta vector.
     NumBeta = 5
 
-    
+
     def P(self, xi, eta):
         '''
         Parameters
@@ -55,7 +56,7 @@ class FiveBeta(Q4):
                           [0, 0, 1, a1*b1*eta, a3*b3*xi]])
 
         return P
-    
+
     def Ge(self, xi, eta):
         '''
         Parameters
@@ -65,21 +66,21 @@ class FiveBeta(Q4):
 
         Returns
         -------
-        G : Variable needed for stiffness matrix 
+        G : Variable needed for stiffness matrix
            or Residual and Tangenet.
 
         '''
-        
+
         if self.LinearFlag:
-            
+
             G = self.B(xi, eta).T @ self.P(xi, eta) * self.detJ(xi, eta)
-        
+
         else:
-                
+
             G = self.B(xi, eta).T @ self.Fmat(xi, eta) @ self.P(xi, eta) * self.detJ(xi, eta)
-            
+
         return G
-    
+
     def He(self, xi, eta):
         '''
         Parameters
@@ -92,11 +93,11 @@ class FiveBeta(Q4):
         H : Variable needed for stiffness matrix.
 
         '''
-        
+
         H = self.P(xi, eta).T @ np.linalg.inv(self.C()) @ self.P(xi, eta) * self.detJ(xi,eta)
-        
+
         return H
-    
+
     def Me(self, xi, eta):
         '''
         Parameters
@@ -109,11 +110,11 @@ class FiveBeta(Q4):
         M : Variable needed for Residual and Tangent.
 
         '''
-        
+
         M = self.P(xi, eta).T @ self.Evec(xi, eta) * self.detJ(xi, eta)
 
         return M
-    
+
     def Le(self, xi, eta, svec):
         '''
         Parameters
@@ -130,7 +131,7 @@ class FiveBeta(Q4):
         L = self.B(xi, eta).T @ self.StressMat(svec) @ self.B(xi, eta) * self.detJ(xi, eta)
 
         return L
-    
+
     def StiffMatrix(self, GaussPoints = None):
         '''
         Parameters
@@ -142,24 +143,24 @@ class FiveBeta(Q4):
         -------
         StiffMatrix : (8x8) Element Stiffness Matrix.
         '''
-        
+
         G = np.zeros((self.NumDOF, self.NumBeta))
         H = np.zeros((self.NumBeta, self.NumBeta))
-            
+
         gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
-    
-        for Xi, Wxi in zip(gp, gw):
-            
-            for Eta, Weta in zip(gp, gw):
-                
+
+        for Xi, Wxi in zip(gp, gw, strict=True):
+
+            for Eta, Weta in zip(gp, gw, strict=True):
+
                 G += self.Ge(Xi, Eta) * Wxi * Weta
-                
+
                 H += self.He(Xi, Eta) * Wxi * Weta
-        
+
         StiffMatrix = self.t * G @ np.linalg.inv(H) @ G.T
-        
+
         return StiffMatrix
-    
+
     def ResTangent(self, GaussPoints = None):
         '''
         Parameters
@@ -180,9 +181,9 @@ class FiveBeta(Q4):
 
         gp, gw = self.GaussPointsAndWeights(GaussPoints) #gauss points and weights
 
-        for Xi, Wxi in zip(gp, gw):
+        for Xi, Wxi in zip(gp, gw, strict=True):
 
-            for Eta, Weta in zip(gp, gw):
+            for Eta, Weta in zip(gp, gw, strict=True):
 
                 M += self.Me(Xi, Eta) * Wxi * Weta
 
@@ -197,9 +198,9 @@ class FiveBeta(Q4):
         # derived stress C @ Evec instead leaves the tangent inconsistent,
         # which costs quadratic Newton convergence and corrupts every
         # sensitivity that solves with this matrix.
-        for Xi, Wxi in zip(gp, gw):
+        for Xi, Wxi in zip(gp, gw, strict=True):
 
-            for Eta, Weta in zip(gp, gw):
+            for Eta, Weta in zip(gp, gw, strict=True):
 
                 L += self.Le(Xi, Eta, self.P(Xi, Eta) @ B) * Wxi * Weta
 

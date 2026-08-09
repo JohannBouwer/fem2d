@@ -15,23 +15,20 @@ class LinearSolver(Solver):
     Sensitivity : Compute dUdx alongside the solution.
     '''
 
-    def Solve(self):
+    def Solve(self) -> None:
         '''
-        Parameters
-        ----------
-        Mesh : Mesh object from the Mesher Class.
+        Solve K U = F once and write U, K, KFull and AllU onto the mesh.
 
         Returns
         -------
-        U : Full Resultant Displacement Vector.
-
+        None. With Sensitivity on, Mesh.dUdx is written too.
         '''
 
         Mesh = self.Mesh
         Sensitivity = self.Sensitivity
         Mesh.KFull = self._Assemble()
         Mesh.U = np.zeros((Mesh.KFull.shape[0], 1))
-        
+
         KFree = self._Free(Mesh.KFull, Mesh.DegOfFreedom)
         Mesh.K = KFree
 

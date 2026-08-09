@@ -19,7 +19,7 @@ class PlaneState(IntEnum):
     Strain = 1
 
     @classmethod
-    def From(cls, plane):
+    def From(cls, plane) -> "PlaneState":
         '''
         Parameters
         ----------
@@ -37,7 +37,7 @@ class PlaneState(IntEnum):
         return cls(int(plane) % 2)
 
 
-def ConstitutiveMatrix(E, v, plane, LinearFlag = True):
+def ConstitutiveMatrix(E: float, v: float, plane, LinearFlag: bool = True):
     '''
     Parameters
     ----------

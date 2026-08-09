@@ -24,7 +24,7 @@ registered, and sensitivities are unavailable if it was not.
 _REGISTRY = {}
 
 
-def RegisterElement(Name, ElementClass, DerivativeClass = None):
+def RegisterElement(Name: str, ElementClass: type, DerivativeClass: type | None = None) -> type:
     '''
     Parameters
     ----------
@@ -43,7 +43,7 @@ def RegisterElement(Name, ElementClass, DerivativeClass = None):
     return ElementClass
 
 
-def RegisteredElements():
+def RegisteredElements() -> list[str]:
     '''
     Returns
     -------
@@ -53,7 +53,7 @@ def RegisteredElements():
     return sorted(_REGISTRY)
 
 
-def LookupElement(ElementType, Derivative = False):
+def LookupElement(ElementType, Derivative: bool = False) -> type:
     '''
     Parameters
     ----------
@@ -68,34 +68,28 @@ def LookupElement(ElementType, Derivative = False):
     if isinstance(ElementType, type):
 
         # A class was passed directly. Find its registered derivative, if any.
-        for Element, DerivativeClass in _REGISTRY.values():
+        Name = ElementType.__name__
 
-            if Element is ElementType:
+        Registered = next((Pair for Pair in _REGISTRY.values() if Pair[0] is ElementType), None)
 
-                Name = ElementType.__name__
-                break
-
-        else:
-
-            Element, DerivativeClass, Name = ElementType, None, ElementType.__name__
+        DerivativeClass = Registered[1] if Registered is not None else None
 
         if not Derivative:
 
-            return Element
+            return ElementType
 
         if DerivativeClass is None:
 
             raise ValueError(
-                'No shape derivative class is registered for {}, so sensitivities '
-                'are unavailable. Register one with '
-                'RegisterElement(name, {}, dMyElementdX).'.format(Name, Name))
+                f'No shape derivative class is registered for {Name}, so sensitivities '
+                f'are unavailable. Register one with RegisterElement(name, {Name}, dMyElementdX).')
 
         return DerivativeClass
 
     if ElementType not in _REGISTRY:
 
-        raise ValueError('Unknown ElementType {!r}, expected one of {} or an '
-                         'Element subclass.'.format(ElementType, RegisteredElements()))
+        raise ValueError(f'Unknown ElementType {ElementType!r}, expected one of {RegisteredElements()} or an '
+                         'Element subclass.')
 
     Element, DerivativeClass = _REGISTRY[ElementType]
 
@@ -104,7 +98,7 @@ def LookupElement(ElementType, Derivative = False):
         if DerivativeClass is None:
 
             raise ValueError('No shape derivative class is registered for '
-                             '{!r}, so sensitivities are unavailable.'.format(ElementType))
+                             f'{ElementType!r}, so sensitivities are unavailable.')
 
         return DerivativeClass
 

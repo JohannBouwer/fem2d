@@ -5,13 +5,13 @@ sites keep working; new code can use the classes directly.
 """
 
 from fem2d.solvers.arclength import ArcLengthSolver
-from fem2d.solvers.base import Solver
-from fem2d.solvers.linear import LinearSolver
-from fem2d.solvers.newton import NonLinearSolver
 
 # Aliased so the façade methods below can share the solvers' names.
 from fem2d.solvers.arclength import ArcLengthSolver as _ArcLength
+from fem2d.solvers.base import Solver
+from fem2d.solvers.linear import LinearSolver
 from fem2d.solvers.linear import LinearSolver as _Linear
+from fem2d.solvers.newton import NonLinearSolver
 from fem2d.solvers.newton import NonLinearSolver as _NonLinear
 
 __all__ = ['Solver', 'LinearSolver', 'NonLinearSolver', 'ArcLengthSolver', 'FEMSolvers']
