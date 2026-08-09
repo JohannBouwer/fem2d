@@ -53,6 +53,10 @@ class NonLinearSolver(Solver):
         Mesh = self.Mesh
         LoadSteps, MaxIter, tol = self.LoadSteps, self.MaxIter, self.tol
         Sensitivity = self.Sensitivity
+        # Records which strain measure the result belongs to, so post processing
+        # knows whether to read it as small strain or finite strain.
+        Mesh.LargeDeflection = True
+
         Mesh.U = np.zeros((Mesh.Nodes.shape[0]*2, 1)) # Initialize the displacement vector
 
         ResNorm = 1 #Initialize the norm of the residual vector

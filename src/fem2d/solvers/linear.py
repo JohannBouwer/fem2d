@@ -26,6 +26,10 @@ class LinearSolver(Solver):
 
         Mesh = self.Mesh
         Sensitivity = self.Sensitivity
+        # Records which strain measure the result belongs to, so post processing
+        # knows whether to read it as small strain or finite strain.
+        Mesh.LargeDeflection = False
+
         Mesh.KFull = self._Assemble()
         Mesh.U = np.zeros((Mesh.KFull.shape[0], 1))
 

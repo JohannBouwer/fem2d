@@ -29,6 +29,13 @@ class Element(ABC):
     #: order than the quantity it differentiates.
     QuadOrder: ClassVar[int]
 
+    #: (NumNodes, 2) local co-ordinates of each node, in local node order.
+    #: Optional. Post processing needs it to evaluate a field at the nodes and
+    #: to triangulate the element for contouring; an element that leaves it
+    #: None can still be solved, and can still be contoured with the
+    #: 'extrapolate' recovery, which only ever samples at the Gauss points.
+    LocalNodes: ClassVar[np.ndarray | None] = None
+
     def __init__(self, NodeCoor: npt.NDArray[np.float64], t: float, E: float, v: float,
                  plane, LinearFlag: bool = True, U: npt.NDArray[np.float64] | None = None):
         '''

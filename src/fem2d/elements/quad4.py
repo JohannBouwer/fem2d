@@ -14,6 +14,11 @@ class Q4(Element):
 
     QuadOrder = 2
 
+    LocalNodes = np.array([[-1.0, -1.0],
+                           [ 1.0, -1.0],
+                           [ 1.0,  1.0],
+                           [-1.0,  1.0]])
+
     def ShapeFunctions(self, xi, eta):
         '''
         Parameters
