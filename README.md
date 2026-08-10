@@ -31,7 +31,9 @@ plt.show()
 ```
 
 Solvers write their results onto the mesh: `Beam.U` is the displacement vector, `Beam.AllU`
-every load step, and `Beam.LoadValues` the load factors. Pass `Sensitivity=True` to any solver
+every load step, and `Beam.LoadValues` the load factors. `ArcLengthSolver` adds
+`Beam.ArcValues`, the arc length accumulated at each stored point, which is what a load path
+is parametrised by when two of them are compared. Pass `Sensitivity=True` to any solver
 and `Beam.dUdx` holds the analytical shape sensitivities as well. Solver progress goes to the
 `fem2d.solvers` logger rather than to stdout, so `logging.basicConfig(level=logging.INFO)`
 turns it on.
@@ -88,8 +90,9 @@ The `notebooks/` directory contains worked examples, each executed with its outp
 The [`research/`](research/) directory reproduces results from the paper this code was written for,
 Bouwer, Kok and Wilke (2023), *Challenges and solutions to arc-length controlled structural shape
 design problems*, [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549):
-why large arc-length steps pay for themselves, a four variable arch design space, and those designs
-solved with Q8 elements.
+why large arc-length steps pay for themselves, a four variable arch design space, those designs
+solved with Q8 elements, and the curve matching objective function that the shape design problem
+minimises, with its analytical gradient.
 
 
 

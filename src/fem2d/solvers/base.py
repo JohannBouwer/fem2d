@@ -230,68 +230,101 @@ class Solver(ABC):
 
                 yield el, dof, dXdx[GlobalDOF]
 
-    def _dKdXVariable(self, var):
+    def _ElementDerivatives(self, Integrand):
         '''
         Parameters
         ----------
-        Mesh : Mesh object from Mesher Class.
-        var : Index of the design variable.
+        Integrand : callable(el, LocalDOF) returning the element integral of
+                    the derivative with respect to that local degree of
+                    freedom.
 
         Returns
         -------
-        dKdx : Derivative of the global stiffness matrix w.r.t the design
-               variable, in sparse CSR form, accumulated over every nodal
-               co-ordinate the variable moves.
+        Yields (var, ElementDOF, Value, weight) for every design variable and
+        every nodal co-ordinate it moves.
+
+        Notes
+        -----
+        The element integral depends on the element and its local degree of
+        freedom alone. A design variable enters only through the scalar
+        dX/dx weight, so the same integral serves every variable that moves
+        that co-ordinate. Integrating once per (element, local dof) and
+        contracting against the weights afterwards is the same chain rule
+        associated the other way round, and it makes the cost independent of
+        the number of design variables rather than proportional to it.
+
+        '''
+
+        Integrated = {}
+
+        for var in range(self.Mesh.VariableNumber):
+
+            for el, dof, weight in self._MovedNodeDOF(var):
+
+                Key = (int(el), int(dof))
+
+                if Key not in Integrated:
+
+                    Integrated[Key] = (self._ElementDOF(el), Integrand(el, dof))
+
+                ElementDOF, Value = Integrated[Key]
+
+                yield var, ElementDOF, Value, weight
+
+    def _dKdXAll(self):
+        '''
+        Returns
+        -------
+        A list of the derivative of the global stiffness matrix with respect to
+        each design variable, in sparse CSR form, accumulated over every nodal
+        co-ordinate that variable moves.
 
         '''
 
         Mesh = self.Mesh
         Element = self._ElementClass(Derivative = True)
 
-        Triplets = ([], [], [])
-
-        for el, dof, weight in self._MovedNodeDOF(var):
-
-            KCoor = self._ElementDOF(el)
+        def Integrand(el, dof):
 
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, 1:]
 
-            Ke = Element(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane).Integrate(dof)
+            return Element(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane).Integrate(dof)
 
-            self._Scatter(Triplets, KCoor, Ke * weight)
+        Triplets = [([], [], []) for _ in range(Mesh.VariableNumber)]
 
-        return self._Sparse(Triplets, Mesh.Nodes.shape[0]*2)
+        for var, KCoor, Ke, weight in self._ElementDerivatives(Integrand):
 
-    def _dRdXVariable(self, var):
+            self._Scatter(Triplets[var], KCoor, Ke * weight)
+
+        return [self._Sparse(t, Mesh.Nodes.shape[0]*2) for t in Triplets]
+
+    def _dRdXAll(self):
         '''
-        Parameters
-        ----------
-        Mesh : Mesh object from Mesher Class.
-        var : Index of the design variable.
-
         Returns
         -------
-        dRdx : Derivative of the global residual vector w.r.t the design
-               variable, accumulated over every nodal co-ordinate the variable
-               moves.
+        dRdx : Derivative of the global residual vector with respect to every
+               design variable, one column each, accumulated over every nodal
+               co-ordinate that variable moves.
 
         '''
 
         Mesh = self.Mesh
         Element = self._ElementClass(Derivative = True)
 
-        dRdx = np.zeros((Mesh.Nodes.shape[0]*2, 1))
-
-        for el, dof, weight in self._MovedNodeDOF(var):
+        def Integrand(el, dof):
 
             RCoor = self._ElementDOF(el)
 
             NodeCoor = Mesh.Nodes[Mesh.Elements[el, 1:]-1, 1:]
 
-            dRedX = Element(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane,
-                            LinearFlag = False, U = Mesh.U[RCoor,:]).ResIntegrate(dof)
+            return Element(NodeCoor, Mesh.t, Mesh.E, Mesh.v, Mesh.plane,
+                           LinearFlag = False, U = Mesh.U[RCoor,:]).ResIntegrate(dof)
 
-            dRdx[RCoor,:] += dRedX * weight
+        dRdx = np.zeros((Mesh.Nodes.shape[0]*2, Mesh.VariableNumber))
+
+        for var, RCoor, dRedX, weight in self._ElementDerivatives(Integrand):
+
+            dRdx[RCoor, var] += (dRedX * weight)[:,0]
 
         return dRdx
 
