@@ -3,6 +3,48 @@
 ## Overview
 This is a basic finite element code developed during my PhD, focusing on shape sensitivities with respect to load-displacement paths in nonlinear structural problems. The code is designed for small-mesh FEM problems, emphasizing the understanding of finite element methods and the implementation of design sensitivities. The code also includes a Q3 1D element implementation.
 
+## Installation
+Needs Python 3.12 or newer.
+
+### With uv
+```bash
+git clone https://github.com/JohannBouwer/fem2D.git
+cd fem2D
+uv sync
+```
+
+`uv sync` creates `.venv` and installs the exact versions pinned in `uv.lock`, including
+`fem2d` itself in editable mode. Prefix commands with `uv run` and there is no environment to
+activate:
+
+```bash
+uv run python -c "from fem2d.meshers import Mesh; print('ok')"
+```
+
+### With pip
+```bash
+git clone https://github.com/JohannBouwer/fem2D.git
+cd fem2D
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+pip resolves dependencies afresh rather than reading `uv.lock`, so you may get newer versions
+than the ones this was tested against. `-e` keeps the install pointing at `src/`, so edits
+take effect without reinstalling.
+
+### Running the notebooks
+`ipykernel` is a dependency, so `notebooks/` and `research/` open straight away in an editor
+that brings its own front end, such as VS Code. JupyterLab itself is deliberately not a
+dependency; add it for that run only with
+
+```bash
+uv run --with jupyterlab jupyter lab
+```
+
+or `pip install jupyterlab` in the pip environment.
+
 ## Quick Start
 Set up a cantilever, solve it with large deflections, and overlay the deformed mesh on the
 undeformed one:
