@@ -8,7 +8,6 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "requests>=2.32.3",
     "numpy>=2.2.2",
     "matplotlib>=3.10.0",
     "scipy>=1.15.1",
@@ -25,7 +24,7 @@ packages = ["src/fem2d"]
 [tool.ruff]
 line-length = 120
 src = ["src"]
-extend-exclude = ["notebooks"]  # generated, and their outputs are not ours to lint
+extend-exclude = ["notebooks", "research"]  # generated, and their outputs are not ours to lint
 
 [tool.ruff.lint]
 select = [

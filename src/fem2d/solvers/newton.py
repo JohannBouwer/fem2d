@@ -114,9 +114,13 @@ class NonLinearSolver(Solver):
 
             Mesh.dUdx = np.zeros((Mesh.U.shape[0], Mesh.VariableNumber))
 
+            # Every design variable at once: the element integrals are shared
+            # between them, so this costs what one variable used to.
+            dRdxAll = self._dRdXAll()
+
             for var in range(Mesh.VariableNumber):
 
-                dRdx = self._dRdXVariable(var)
+                dRdx = dRdxAll[:, [var]]
 
                 dUdX = Factor.solve(-1*dRdx[Mesh.DegOfFreedom,:])
 

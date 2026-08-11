@@ -46,8 +46,13 @@ class ArcLengthSolver(Solver):
 
         Returns
         -------
-        None. Writes U, AllU and LoadValues onto the mesh, and with
+        None. Writes U, AllU, LoadValues and ArcValues onto the mesh, and with
         Sensitivity on also dUdx, dUdx_All and dLdx.
+
+        AllU, LoadValues and ArcValues all carry one entry per stored point,
+        the first being the undeformed state at zero load and zero arc length.
+        ArcValues is the arc length accumulated up to each point, which is what
+        a load path is parametrised by when two of them are compared.
 
         Raises
         ------
@@ -90,6 +95,10 @@ class ArcLengthSolver(Solver):
         Mesh.LoadValues = np.array([[0]]) # store load values
         Loadfactor = 0.0 #initialize the load factor value
         AccumulatedArcLength = 0 #initialize the Accumulated arc length
+
+        # The arc length reached at each stored point, so the path can be
+        # parametrised by it. Records the steps actually taken, cuts included.
+        Mesh.ArcValues = np.array([0.0])
 
         if Sensitivity:
 
@@ -209,6 +218,7 @@ class ArcLengthSolver(Solver):
             # store step values
             Mesh.AllU = np.hstack((Mesh.AllU, Mesh.U))
             Mesh.LoadValues = np.append(Mesh.LoadValues, Loadfactor)
+            Mesh.ArcValues = np.append(Mesh.ArcValues, AccumulatedArcLength)
 
             if Sensitivity:
 
@@ -230,9 +240,13 @@ class ArcLengthSolver(Solver):
 
                 dUdL = Factor.solve(Mesh.Load[Mesh.DegOfFreedom,:])
 
+                # Every design variable at once: the element integrals are
+                # shared between them, so this costs what one variable used to.
+                dRdxAll = self._dRdXAll()
+
                 for var in range(Mesh.VariableNumber):
 
-                    dRdx = self._dRdXVariable(var)
+                    dRdx = dRdxAll[:, [var]]
 
                     # Displacement sensitivity holding the load factor fixed.
                     dUdxL = Factor.solve(-1*dRdx[Mesh.DegOfFreedom,:])

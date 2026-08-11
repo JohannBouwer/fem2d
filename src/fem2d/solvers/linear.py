@@ -46,9 +46,13 @@ class LinearSolver(Solver):
 
             Mesh.dUdx = np.zeros((Mesh.U.shape[0], Mesh.VariableNumber))
 
+            # Every design variable at once: the element integrals are shared
+            # between them, so this costs what one variable used to.
+            dKdxAll = self._dKdXAll()
+
             for var in range(Mesh.VariableNumber):
 
-                dKdx = self._Free(self._dKdXVariable(var), Mesh.DegOfFreedom)
+                dKdx = self._Free(dKdxAll[var], Mesh.DegOfFreedom)
 
                 dUdX = Factor.solve(-1*(dKdx @ Mesh.U[Mesh.DegOfFreedom]))
 

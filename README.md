@@ -3,6 +3,48 @@
 ## Overview
 This is a basic finite element code developed during my PhD, focusing on shape sensitivities with respect to load-displacement paths in nonlinear structural problems. The code is designed for small-mesh FEM problems, emphasizing the understanding of finite element methods and the implementation of design sensitivities. The code also includes a Q3 1D element implementation.
 
+## Installation
+Needs Python 3.12 or newer.
+
+### With uv
+```bash
+git clone https://github.com/JohannBouwer/fem2D.git
+cd fem2D
+uv sync
+```
+
+`uv sync` creates `.venv` and installs the exact versions pinned in `uv.lock`, including
+`fem2d` itself in editable mode. Prefix commands with `uv run` and there is no environment to
+activate:
+
+```bash
+uv run python -c "from fem2d.meshers import Mesh; print('ok')"
+```
+
+### With pip
+```bash
+git clone https://github.com/JohannBouwer/fem2D.git
+cd fem2D
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+pip resolves dependencies afresh rather than reading `uv.lock`, so you may get newer versions
+than the ones this was tested against. `-e` keeps the install pointing at `src/`, so edits
+take effect without reinstalling.
+
+### Running the notebooks
+`ipykernel` is a dependency, so `notebooks/` and `research/` open straight away in an editor
+that brings its own front end, such as VS Code. JupyterLab itself is deliberately not a
+dependency; add it for that run only with
+
+```bash
+uv run --with jupyterlab jupyter lab
+```
+
+or `pip install jupyterlab` in the pip environment.
+
 ## Quick Start
 Set up a cantilever, solve it with large deflections, and overlay the deformed mesh on the
 undeformed one:
@@ -31,7 +73,9 @@ plt.show()
 ```
 
 Solvers write their results onto the mesh: `Beam.U` is the displacement vector, `Beam.AllU`
-every load step, and `Beam.LoadValues` the load factors. Pass `Sensitivity=True` to any solver
+every load step, and `Beam.LoadValues` the load factors. `ArcLengthSolver` adds
+`Beam.ArcValues`, the arc length accumulated at each stored point, which is what a load path
+is parametrised by when two of them are compared. Pass `Sensitivity=True` to any solver
 and `Beam.dUdx` holds the analytical shape sensitivities as well. Solver progress goes to the
 `fem2d.solvers` logger rather than to stdout, so `logging.basicConfig(level=logging.INFO)`
 turns it on.
@@ -83,6 +127,16 @@ The `notebooks/` directory contains worked examples, each executed with its outp
 - **`Example_custom_element.ipynb`** — how to add your own element. Builds a four node quadrilateral
   interpolated with sin² and cos², which turns out to be Q4 in disguise but with an integrand Gauss
   quadrature cannot integrate exactly, so it doubles as a lesson in choosing a quadrature rule.
+
+## Research
+The [`research/`](research/) directory reproduces results from the paper this code was written for,
+Bouwer, Kok and Wilke (2023), *Challenges and solutions to arc-length controlled structural shape
+design problems*, [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549):
+why large arc-length steps pay for themselves, a four variable arch design space, those designs
+solved with Q8 elements, the curve matching objective function that the shape design problem
+minimises with its analytical gradient, SLSQP declaring success 10.7 mm from a known optimum
+because the arc stepping makes the objective discontinuous, and a gradient-only optimiser
+halving that error on the same problem.
 
 
 

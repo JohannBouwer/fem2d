@@ -57,6 +57,12 @@ class Element(ABC):
         self.LinearFlag = LinearFlag
         self.U = U
 
+        # The Jacobian depends on the local co-ordinate and the nodal
+        # co-ordinates only, so it is the same every time it is asked for at a
+        # given quadrature point. Everything downstream of it asks repeatedly,
+        # so keep the mapping for each point once it has been built.
+        self._MappingCache: dict[tuple[float, float], tuple] = {}
+
         return
 
     @property
@@ -184,6 +190,36 @@ class Element(ABC):
 
         return XY
 
+    def _Mapping(self, xi, eta):
+        '''
+        Parameters
+        ----------
+        xi : Local variable 1.
+        eta : Local variable 2.
+
+        Returns
+        -------
+        (J, InvJ, detJ) at the point, built on first use and kept afterwards.
+
+        Notes
+        -----
+        The arrays are handed out by reference rather than copied, so treat
+        them as read only. Nothing in the library writes into them, and the
+        copy would cost more than the inverse it saves.
+
+        '''
+        Cached = self._MappingCache.get((xi, eta))
+
+        if Cached is None:
+
+            J = self.ShapeDerivatives(xi, eta) @ self.NodeCoor
+
+            Cached = (J, np.linalg.inv(J), np.linalg.det(J))
+
+            self._MappingCache[(xi, eta)] = Cached
+
+        return Cached
+
     def Jacobian(self, xi, eta):
         '''
         Parameters
@@ -197,9 +233,7 @@ class Element(ABC):
 
         '''
 
-        J = self.ShapeDerivatives(xi, eta) @ self.NodeCoor
-
-        return J
+        return self._Mapping(xi, eta)[0]
 
     def InvJ(self, xi, eta):
         '''
@@ -213,9 +247,8 @@ class Element(ABC):
         InvJ : Inverse of the Jacobian.
 
         '''
-        InvJ = np.linalg.inv(self.Jacobian(xi, eta))
 
-        return InvJ
+        return self._Mapping(xi, eta)[1]
 
     def detJ(self, xi, eta):
         '''
@@ -229,9 +262,7 @@ class Element(ABC):
         detJ : determinant of the Jacobian Matrix.
         '''
 
-        detJ = np.linalg.det(self.Jacobian(xi, eta))
-
-        return detJ
+        return self._Mapping(xi, eta)[2]
 
     def B(self, xi, eta):
         '''
