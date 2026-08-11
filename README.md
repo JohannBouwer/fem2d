@@ -91,8 +91,10 @@ The [`research/`](research/) directory reproduces results from the paper this co
 Bouwer, Kok and Wilke (2023), *Challenges and solutions to arc-length controlled structural shape
 design problems*, [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549):
 why large arc-length steps pay for themselves, a four variable arch design space, those designs
-solved with Q8 elements, and the curve matching objective function that the shape design problem
-minimises, with its analytical gradient.
+solved with Q8 elements, the curve matching objective function that the shape design problem
+minimises with its analytical gradient, SLSQP declaring success 10.7 mm from a known optimum
+because the arc stepping makes the objective discontinuous, and a gradient-only optimiser
+halving that error on the same problem.
 
 
 
