@@ -16,6 +16,18 @@ dependencies = [
     "ipykernel>=6.0.0",
 ]
 
+[project.optional-dependencies]
+# Gradient enhanced RBF surrogates, used by fem2d.surrogate and the research
+# notebook that optimises with them. Optional because it pulls in scikit-learn,
+# which nothing else here needs, and because the surrogates are one way of using
+# the sensitivities rather than part of the finite element code.
+surrogate = ["ge_rbf>=0.2"]
+
+[tool.uv.sources]
+# Not on PyPI. Keeping the requirement above plain and the location here is uv's
+# own pattern, and leaves the published metadata free of a direct reference.
+ge_rbf = { git = "https://github.com/JohannBouwer/GE_RBF.git" }
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

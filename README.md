@@ -45,6 +45,33 @@ uv run --with jupyterlab jupyter lab
 
 or `pip install jupyterlab` in the pip environment.
 
+### The `surrogate` extra
+[`fem2d.surrogate`](src/fem2d/surrogate.py) fits a solved load path as a smooth function of the
+shape variables and the arc length together, using the sampled sensitivities in both
+directions. `ge_rbf` handles trajectory data natively, so this is only the glue between the
+solver's output and its API. It needs
+[`ge_rbf`](https://github.com/JohannBouwer/GE_RBF), which is optional because it pulls in
+scikit-learn that nothing else here uses, and because the surrogates are one way of spending
+the sensitivities rather than part of the finite element code:
+
+```bash
+uv sync --extra surrogate
+```
+
+`ge_rbf` is not on PyPI, so `pyproject.toml` gives uv its git location. pip does not read that
+section and would go looking on PyPI, so in the pip environment install it first and the extra
+second, by which point the requirement is already satisfied:
+
+```bash
+pip install git+https://github.com/JohannBouwer/GE_RBF.git
+pip install -e ".[surrogate]"
+```
+
+Nothing else imports it: `import fem2d` works whether or not the extra is installed, and
+`import fem2d.surrogate` without it raises an `ImportError` naming the command above.
+[`research/SurrogateBasedShapeDesign.ipynb`](research/SurrogateBasedShapeDesign.ipynb) is what
+uses it.
+
 ## Quick Start
 Set up a cantilever, solve it with large deflections, and overlay the deformed mesh on the
 undeformed one:

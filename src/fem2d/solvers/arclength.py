@@ -47,12 +47,20 @@ class ArcLengthSolver(Solver):
         Returns
         -------
         None. Writes U, AllU, LoadValues and ArcValues onto the mesh, and with
-        Sensitivity on also dUdx, dUdx_All and dLdx.
+        Sensitivity on also dUdx, dUdx_All, dLdx, dUds_All and dLds.
 
         AllU, LoadValues and ArcValues all carry one entry per stored point,
         the first being the undeformed state at zero load and zero arc length.
         ArcValues is the arc length accumulated up to each point, which is what
         a load path is parametrised by when two of them are compared.
+
+        dUds_All and dLds are the tangent to the path with respect to arc length
+        rather than to a design variable, one entry per arc step. They ride along
+        with Sensitivity because they are read off the factorisation taken at the
+        converged point, which only that branch performs, but they are otherwise
+        unrelated to the design sensitivities: they describe how the solution
+        moves along the path it is on, not how the path moves when the shape
+        changes. Surrogates fitted over shape and arc length together need both.
 
         Raises
         ------
@@ -240,6 +248,22 @@ class ArcLengthSolver(Solver):
 
                 dUdL = Factor.solve(Mesh.Load[Mesh.DegOfFreedom,:])
 
+                # Tangent to the path, with respect to arc length rather than to a
+                # design variable. Differentiating the same constraint along the
+                # path gives ds**2 = |dU|**2 + psi**2 dL**2, and the tangent is
+                # dU = dUdL dL, so ds = |dL| sqrt(dUdL.dUdL + psi**2). The sign is
+                # the direction of travel: IncU is dUdL*IncL to first order, so
+                # IncU.T @ dUdL carries the sign of IncL.
+                # Two properties worth knowing, both used to check this: with
+                # psi = 0 the path has unit speed, |dU/ds| = 1 exactly, and at a
+                # limit point Ktangent is singular so dUdL blows up and dL/ds is 0.
+                Sign = np.sign((IncU.T @ dUdL)[0,0])
+
+                dLds = Sign/np.sqrt((dUdL.T @ dUdL)[0,0] + psi**2)
+
+                dUds = np.zeros((Mesh.U.shape[0], 1))
+                dUds[Mesh.DegOfFreedom, 0] = (dUdL*dLds)[:,0]
+
                 # Every design variable at once: the element integrals are
                 # shared between them, so this costs what one variable used to.
                 dRdxAll = self._dRdXAll()
@@ -274,10 +298,14 @@ class ArcLengthSolver(Solver):
                 if cnt_step == 0:
                     Mesh.dUdx_All = dUdx
                     Mesh.dLdx = np.copy(dLdx)
+                    Mesh.dUds_All = dUds
+                    Mesh.dLds = np.array([[dLds]])
 
                 else:
                     Mesh.dUdx_All = np.dstack((Mesh.dUdx_All, dUdx))
                     Mesh.dLdx = np.vstack((Mesh.dLdx, dLdx))
+                    Mesh.dUds_All = np.hstack((Mesh.dUds_All, dUds))
+                    Mesh.dLds = np.vstack((Mesh.dLds, [[dLds]]))
 
             cnt_step += 1
 
