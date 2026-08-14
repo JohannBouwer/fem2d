@@ -44,7 +44,27 @@ over solved ones. Fitting the responses over arc length is what needs `ArcLength
 `dLds` and `dUds_All`; the notebook checks them against the two identities that make them
 self-checking before using them.
 
-Optimising over the fitted responses is the next step and is deliberately not here.
+Optimising over the fitted responses is [`SurrogateBasedOptimisation.ipynb`](SurrogateBasedOptimisation.ipynb).
 
 Runs in about 15 minutes, nearly all of it the 23 arc-length solves carrying sensitivities.
+
+## `SurrogateBasedOptimisation.ipynb`
+
+The 2023 paper's design problem — find a shape whose load path matches a target curve — solved
+on the surrogates rather than on the solver. Twenty Latin hypercube curves over the paper's
+`[80,120]⁴`, and the objective assembled from the two fitted responses at the target's own
+**fixed** arc lengths, which is what removes the discontinuity: neither the sample count nor the
+sample locations can then move with the design. SLSQP runs on that for no further solves.
+
+**It matches the target better than either solver-based optimiser, for fewer solves** —
+objective B of 1.19e-04 in 22, against ADAM's 4.10e-04 in 27 and SLSQP's 3.33e-03 in 118, all
+counted as objective evaluations during the search.
+
+The target is the `[100]⁴` arch's path, which matters only because a design reaching zero then
+provably exists — that is what makes the comparison fair, not the radii themselves. Two of the
+twenty curves snap through and have to be excluded before any of it works; keeping them takes
+cross-validation error from 4% to 26%. Infill is the obvious next step and is deliberately not
+here.
+
+Runs in about 20 minutes: 25 arc-length solves and two minutes of cross-validation.
 
