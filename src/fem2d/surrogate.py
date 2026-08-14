@@ -204,8 +204,22 @@ class PathSurrogate:
                                         random_state=self.Seed)
         else:
             Template.set_params(centers=self.Centres)
-            self.Search_ = gradient_search(Template, Zt, Y, Gt, epsilons=Epsilons,
-                                           max_condition=self.MaxCondition)
+            try:
+                self.Search_ = gradient_search(Template, Zt, Y, Gt, epsilons=Epsilons,
+                                               max_condition=self.MaxCondition)
+            except ValueError:
+                # Every candidate was rejected on conditioning. An interpolating RBF on
+                # points strung along trajectories is ill conditioned by construction, so at
+                # any real sample count one centre per sample will land here. Drop the filter
+                # and choose on the gradient error alone, and say so - the fit is delicate,
+                # but returning it beats refusing to fit at all when basis_search, given the
+                # same data, simply marks those cells and carries on.
+                logger.warning('every shape parameter exceeded max_condition=%.3g with '
+                               '%s centres; choosing on gradient error alone',
+                               self.MaxCondition,
+                               'one per sample' if self.Centres is None else self.Centres)
+                self.Search_ = gradient_search(Template, Zt, Y, Gt, epsilons=Epsilons,
+                                               max_condition=np.inf)
 
         self.Model_ = self.Search_.best_estimator
         self.Samples_ = Zt.shape[0]
