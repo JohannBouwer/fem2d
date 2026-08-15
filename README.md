@@ -69,8 +69,9 @@ pip install -e ".[surrogate]"
 
 Nothing else imports it: `import fem2d` works whether or not the extra is installed, and
 `import fem2d.surrogate` without it raises an `ImportError` naming the command above.
-[`research/SurrogateBasedShapeDesign.ipynb`](research/SurrogateBasedShapeDesign.ipynb) is what
-uses it.
+[`research/SurrogateBasedShapeDesign.ipynb`](research/SurrogateBasedShapeDesign.ipynb) and
+[`research/SurrogateBasedOptimisation.ipynb`](research/SurrogateBasedOptimisation.ipynb) are
+what use it.
 
 ## Quick Start
 Set up a cantilever, solve it with large deflections, and overlay the deformed mesh on the
@@ -160,14 +161,22 @@ MIT — see [LICENSE](LICENSE). Use it, change it, build on it, commercially or 
 keep the copyright notice. It comes with no warranty.
 
 ## Research
-The [`research/`](research/) directory reproduces results from the paper this code was written for,
-Bouwer, Kok and Wilke (2023), *Challenges and solutions to arc-length controlled structural shape
-design problems*, [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549):
-why large arc-length steps pay for themselves, a four variable arch design space, those designs
-solved with Q8 elements, the curve matching objective function that the shape design problem
-minimises with its analytical gradient, SLSQP declaring success 10.7 mm from a known optimum
-because the arc stepping makes the objective discontinuous, and a gradient-only optimiser
-halving that error on the same problem.
+The [`research/`](research/) directory reproduces results from the work this code was written
+for. See [`research/README.md`](research/README.md) for what each notebook shows.
+
+> Bouwer, J. M., Kok, S. and Wilke, D. N. (2023). *Challenges and solutions to arc-length
+> controlled structural shape design problems.* Mechanics Based Design of Structures and
+> Machines, **51**(7), 4088–4119.
+> [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549)
+
+> Bouwer, J., Wilke, D. N. and Kok, S. (2024). *A novel and fully automated coordinate system
+> transformation scheme for near optimal surrogate construction.* Computer Methods in Applied
+> Mechanics and Engineering, **419**, 116648.
+> [doi:10.1016/j.cma.2023.116648](https://doi.org/10.1016/j.cma.2023.116648)
+
+> Bouwer, J. M. (2023). *The shape optimisation of compliant structures to produce a desired
+> snap-through load displacement path.* PhD thesis, University of Pretoria.
+> [repository.up.ac.za](https://repository.up.ac.za/items/db54b751-f3d3-4387-914a-27c46a2bcc81)
 
 
 

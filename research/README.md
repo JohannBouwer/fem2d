@@ -1,7 +1,7 @@
 # Research
 
-Short numerical walk-throughs of the papers this code was written for. One notebook per
-paper, each committed with its output so it reads without being run.
+Short numerical walk-throughs of the work this code was written for. One notebook per paper
+or thesis chapter, each committed with its output so it reads without being run.
 
 All three use the same structure: a deep circular arch on four design radii, loaded at the
 crown and traced with the arc-length solver, over a design box narrower than the paper's.
@@ -52,6 +52,10 @@ Needs the optional `ge_rbf` dependency (`uv sync --extra surrogate`); the glue b
 solver's output and its trajectory API is [`fem2d.surrogate`](../src/fem2d/surrogate.py).
 
 ## `SurrogateBasedOptimisation.ipynb`
+
+> Bouwer, J. M. (2023). *The shape optimisation of compliant structures to produce a desired
+> snap-through load displacement path*, **Chapter 6**. PhD thesis, University of Pretoria.
+> [repository.up.ac.za](https://repository.up.ac.za/items/db54b751-f3d3-4387-914a-27c46a2bcc81)
 
 **Goal.** Solve the 2023 paper's design problem on those fitted responses rather than on the
 solver. Same box and target as the first notebook, so the objective is the same function and
