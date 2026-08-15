@@ -3,6 +3,9 @@
 Short numerical walk-throughs of the papers this code was written for. One notebook per
 paper, each committed with its output so it reads without being run.
 
+All three use the same structure: a deep circular arch on four design radii, loaded at the
+crown and traced with the arc-length solver, over a design box narrower than the paper's.
+
 ## `ArcLengthControlledShapeDesign.ipynb`
 
 > Bouwer, J. M., Kok, S. and Wilke, D. N. (2023). *Challenges and solutions to arc-length
@@ -10,17 +13,24 @@ paper, each committed with its output so it reads without being run.
 > Machines, **51**(7), 4088–4119.
 > [doi:10.1080/15397734.2021.1950549](https://doi.org/10.1080/15397734.2021.1950549)
 
-A 270° deep circular arch whose shape is four radii, loaded at the crown and traced with the
-arc-length solver. The first half is analysis: why large arc-length steps pay for themselves,
-four designs and their load-deflection paths on Q8 elements. The second half is the design
-problem — the paper's curve-matching objective, equations (9) and (10), with its analytical
-gradient checked against central differences to eight figures. The point is the last two
-sections: the solver's adaptive arc stepping makes the objective discontinuous, so SLSQP
-declares success 10.7 mm from a known optimum, while ADAM, which never reads the objective
-value, halves that error on the identical problem. Still to come are the paper's own
-discontinuity study and its GOSSA and Modified Subgradient optimisers.
+**Goal.** Recover an arch's shape from its load-deflection path, using the paper's
+curve-matching objective and its analytical gradient.
 
-Runs in about two hours, nearly all of it the two optimisers.
+- **Large arc-length steps pay for themselves.** Cost is U-shaped in the prescribed step,
+  not monotonic: small steps cost steps, large ones cost retries.
+- **The adaptive arc stepping makes the objective discontinuous**, and SLSQP terminates
+  *successfully* well short of a known optimum, because it decides termination from
+  function values.
+- **ADAM gets substantially closer for far fewer solves.** It never reads the objective
+  value, which is the paper's argument for defining the optimum by gradient alone.
+- **A design the solver cannot trace is usually a starved corrector, not an impossible
+  arch.** The iteration budget binds, not the cut budget. Such designs form a thin sheet
+  an optimiser can converge onto and then oscillate across, taking a fabricated penalty
+  value as it does — so a failed solve is retried once on a larger budget before it counts
+  as untraceable, leaving the retry pattern and its discontinuity untouched.
+
+Still to come: the paper's own discontinuity study, and its GOSSA and Modified Subgradient
+optimisers.
 
 ## `SurrogateBasedShapeDesign.ipynb`
 
@@ -29,42 +39,28 @@ Runs in about two hours, nearly all of it the two optimisers.
 > Mechanics and Engineering, **419**, 116648.
 > [doi:10.1016/j.cma.2023.116648](https://doi.org/10.1016/j.cma.2023.116648)
 
-The load path itself as a surrogate, rather than an objective computed from it. Needs the
-optional `ge_rbf` dependency (`uv sync --extra surrogate`); the glue between the solver's output
-and its trajectory API is [`fem2d.surrogate`](../src/fem2d/surrogate.py).
+**Goal.** Fit the load path itself — crown load factor and displacement over the design radii
+**and** the accumulated arc length — rather than fitting an objective computed from it.
 
-The crown load factor and the crown displacement are each fitted as a function of the design
-radii **and the accumulated arc length**, so one traced path contributes a sample per arc step
-rather than a single sample. That is the standard way round — an objective becomes a calculation
-on top of the fitted responses, and can be changed or replaced without sampling anything again.
-Sections 1–5 use one design variable and four solves, few enough that both surfaces can be drawn
-in 3D and checked against a fifth design held back. Section 6 repeats it with three variables and
-fifteen curves, where nothing can be drawn and accuracy is shown by laying predicted load paths
-over solved ones. Fitting the responses over arc length is what needs `ArcLengthSolver`'s
-`dLds` and `dUds_All`; the notebook checks them against the two identities that make them
-self-checking before using them.
+- **One traced path contributes a sample per arc step**, not a single sample.
+- **An objective becomes a calculation on top of the fitted responses**, so it can be changed
+  or replaced without sampling anything again.
+- Fitting over arc length needs the solver's `dLds` and `dUds_All`, which the notebook checks
+  against the two identities that make them self-checking before using them.
 
-Optimising over the fitted responses is [`SurrogateBasedOptimisation.ipynb`](SurrogateBasedOptimisation.ipynb).
-
-Runs in about 15 minutes, nearly all of it the 23 arc-length solves carrying sensitivities.
+Needs the optional `ge_rbf` dependency (`uv sync --extra surrogate`); the glue between the
+solver's output and its trajectory API is [`fem2d.surrogate`](../src/fem2d/surrogate.py).
 
 ## `SurrogateBasedOptimisation.ipynb`
 
-The 2023 paper's design problem — find a shape whose load path matches a target curve — solved
-on the surrogates rather than on the solver. Twenty Latin hypercube curves over the paper's
-`[80,120]⁴`, and the objective assembled from the two fitted responses at the target's own
-**fixed** arc lengths, which is what removes the discontinuity: neither the sample count nor the
-sample locations can then move with the design. SLSQP runs on that for no further solves.
+**Goal.** Solve the 2023 paper's design problem on those fitted responses rather than on the
+solver. Same box and target as the first notebook, so the objective is the same function and
+the two solver-based optimisers serve as baselines.
 
-**It matches the target better than either solver-based optimiser, for fewer solves** —
-objective B of 1.19e-04 in 22, against ADAM's 4.10e-04 in 27 and SLSQP's 3.33e-03 in 118, all
-counted as objective evaluations during the search.
-
-The target is the `[100]⁴` arch's path, which matters only because a design reaching zero then
-provably exists — that is what makes the comparison fair, not the radii themselves. Two of the
-twenty curves snap through and have to be excluded before any of it works; keeping them takes
-cross-validation error from 4% to 26%. Infill is the obvious next step and is deliberately not
-here.
-
-Runs in about 20 minutes: 25 arc-length solves and two minutes of cross-validation.
-
+- **The discontinuity goes.** Evaluating the fitted responses at the target's *fixed* arc
+  lengths means neither the sample count nor the sample locations move with the design.
+- **It finds a better design than either solver-based optimiser, for fewer solves than
+  either** — and the ranking is measured by verification solves, not predicted by the fit.
+- **The fit's own error is now what limits how finely it can aim**, rather than the
+  optimiser. That is what makes infill the obvious next step, and it is deliberately not
+  here.
