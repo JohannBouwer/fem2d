@@ -241,6 +241,30 @@ class MeshBase(ABC):
                                 (Middle[:, 0], Middle[:, 1]),
                                 (Second[:, 0], Second[:, 1])])
 
+    def _MidSideStations(self, Corners) -> npt.NDArray[np.float64]:
+        '''
+        Parameters
+        ----------
+        Corners : (el_num + 1, 2) co-ordinates of the element boundaries along
+                  one surface.
+
+        Returns
+        -------
+        (2*el_num + 1, 2) with the midpoint of each pair inserted between them,
+        which is the station array _StripNodes wants. Putting the mid side node
+        at the midpoint of the edge it belongs to keeps the edge straight, so
+        the element stays well shaped even where consecutive boundaries are
+        unevenly spaced.
+
+        '''
+        Corners = np.asarray(Corners, dtype = float)
+
+        Stations = np.zeros((2*Corners.shape[0] - 1, 2))
+        Stations[0::2] = Corners
+        Stations[1::2] = 0.5*(Corners[:-1] + Corners[1:])
+
+        return Stations
+
     def _StripElements(self, First, Increment, Count) -> npt.NDArray[np.int64]:
         '''
         Parameters

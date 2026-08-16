@@ -133,9 +133,20 @@ class Q8Mesh(Mesh):
         -----
         The elements are split between the two members the same way the four
         node frame splits them, so the two element types put the corner in the
-        same place. The corner itself is mitred: the inner surface turns at
-        (t, length_up - t) while the outer turns at (0, length_up), so the
-        element edge between them runs diagonally across the corner.
+        same place.
+
+        The corner is mitred. The inner surface turns at (t, length_up - t) and
+        the outer at (0, length_up), and the element edge joining those two
+        points is the diagonal of the corner square. The whole turn is absorbed
+        by the two elements either side of that diagonal, which leaves every
+        other element a rectangle. Sharing the turn out along both members
+        instead is simpler to write and looks it: every element comes out a
+        sheared parallelogram.
+
+        Element boundaries are spaced evenly along the inner surface, which is
+        the shorter of the two, and the outer surface reuses those positions.
+        Spacing the outer evenly instead would put its last vertical boundary
+        exactly on the corner and collapse the mitre element to nothing.
 
         """
         length_up, length_side = var[0], var[1]
@@ -146,32 +157,27 @@ class Q8Mesh(Mesh):
         Up = int((el_num - 1) / 2) + 1
         Side = el_num - Up
 
-        UpStations = np.linspace(0, length_up, 2 * Up + 1)
-        SideStations = np.linspace(0, length_side, 2 * Side + 1)
+        Rise = np.linspace(0, length_up - t, Up + 1)          # up the inner face
+        Run = np.linspace(t, length_side, Side + 1)[1:]       # along the inner face
 
-        # Outer surface: up the left face of the vertical member, then along
-        # the top face of the horizontal one.
-        Outer = np.vstack(
-            (
-                np.column_stack((np.zeros_like(UpStations), UpStations)),
-                np.column_stack((SideStations[1:], np.full_like(SideStations[1:], length_up))),
-            )
-        )
-
-        # Inner surface: up the right face, turning the corner a depth early.
         Inner = np.vstack(
             (
-                np.column_stack((np.full_like(UpStations, t), UpStations * (length_up - t) / length_up)),
-                np.column_stack(
-                    (
-                        t + SideStations[1:] * (length_side - t) / length_side,
-                        np.full_like(SideStations[1:], length_up - t),
-                    )
-                ),
+                np.column_stack((np.full_like(Rise, t), Rise)),
+                np.column_stack((Run, np.full_like(Run, length_up - t))),
             )
         )
 
-        return Inner, Outer
+        # The outer surface takes the same boundaries, except that where the
+        # inner one turns, the outer is out at the corner of the frame.
+        Outer = np.vstack(
+            (
+                np.column_stack((np.zeros(Up), Rise[:-1])),
+                np.array([[0.0, length_up]]),
+                np.column_stack((Run, np.full_like(Run, length_up))),
+            )
+        )
+
+        return self._MidSideStations(Inner), self._MidSideStations(Outer)
 
     def SingleElement(self, Length, Height, Load):
         """
