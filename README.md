@@ -124,7 +124,7 @@ averages there, and `'none'` leaves each element with its own values so the jump
 visible. `NodalField` returns the same numbers without plotting.
 
 ## Features
-- Supports **three element types**, **three solvers**, and **three meshers** for simple structural problems.
+- Supports **three element types**, **three solvers**, and **four meshers** for simple structural problems.
 - Developed with a focus on **nonlinear structural analysis** and **design sensitivity analysis**.
 
 ## Solvers
@@ -139,9 +139,52 @@ The code includes the following solvers:
 - **5β**: Five-parameter assumed-stress element.
 
 ## Mesh Generators
-- **Cantilever**: Generates a cantilever beam mesh.
-- **Deep Semi-Circular Arch**: Creates a deep arch mesh.
-- **Curved Beam**: Mesh for curved beam structures.
+`Mesh` builds four node meshes, for `'Q4'` and `'5B'`, and `Q8Mesh` builds the eight node
+version of the same four geometries:
+
+- **`SingleElement`**: One element, for checking an element in isolation.
+- **`SimpleBeam`**: A cantilever, one element through the thickness, point loaded at the tip.
+- **`LeeFrame`**: The Lee frame, an L of two members, loaded on the horizontal one.
+- **`SemiCircularArch`**: The DaDeppo and Schmidt deep arch, clamped at one end and pinned at
+  the other, with the radius at a set of design points as the shape variables.
+
+### Writing your own mesh
+Subclass `MeshBase` and implement `Build`. A mesh supplies geometry and boundary conditions
+only; the free degree of freedom bookkeeping, the shape sensitivities and the validity checks
+come from the base class:
+
+```python
+from fem2d.meshers import MeshBase
+
+class TaperedBeam(MeshBase):
+
+    def Build(self, el_num, Length, RootHeight, TipHeight, Load):
+
+        self.SetNodes(self._NodeArray(el_num, Length, RootHeight, TipHeight))
+        self.SetElements(self._StripElements([1, 2, el_num + 3, el_num + 2], [1, 1, 1, 1], el_num))
+
+        self.Clamp([1, el_num + 2])                      # boundary conditions by node id
+        self.AddLoad(el_num + 1, [0.0, Load])            # any vector, over any set of nodes
+        self.SetSensitivity(lambda v: self._NodeArray(el_num, Length, *v),
+                            [RootHeight, TipHeight])     # sets dXdx and VariableNumber together
+
+        self._Finalise()
+
+        return
+```
+
+Boundary conditions are `Fix(Nodes, 'x' | 'y' | 'xy')`, with `Pin` and `Clamp` as named
+intentions on top of it, and `Free` to release. Loads are `AddLoad(Nodes, Vector)`, which
+accumulates, so a load can be built up over as many nodes and directions as the geometry
+needs; `LoadDOF` reports where it ended up. `ProbeDOF` is the degree of freedom the load path
+plots follow, defaulting to the largest applied component — it is what `LoadNode` refers to,
+under the name that predates loads spanning more than one node.
+
+`_Finalise` runs `Validate`, which rejects a connectivity that does not match the element,
+node ids that do not line up with the solvers' indexing, and elements whose corners run
+clockwise, and warns about a load applied at a held degree of freedom or a mesh with a rigid
+body mode left in it. Set `AutoValidate = False` to build a mesh the checks reject, or call
+`Validate(Jacobian=True)` by hand for the stricter, slower check at every Gauss point.
 
 ## Example Usage
 The `notebooks/` directory contains worked examples, each executed with its output stored:
@@ -155,6 +198,9 @@ The `notebooks/` directory contains worked examples, each executed with its outp
 - **`Example_custom_element.ipynb`** — how to add your own element. Builds a four node quadrilateral
   interpolated with sin² and cos², which turns out to be Q4 in disguise but with an integrand Gauss
   quadrature cannot integrate exactly, so it doubles as a lesson in choosing a quadrature rule.
+- **`Example_custom_mesh.ipynb`** — how to add your own mesh. Builds a tapered cantilever with two
+  shape variables, shows what `Validate` catches by deliberately breaking it three ways, and checks
+  the sensitivities that come free with it against a central finite difference.
 
 ## License
 MIT — see [LICENSE](LICENSE). Use it, change it, build on it, commercially or otherwise; just
